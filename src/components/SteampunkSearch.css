@@ -1,0 +1,153 @@
+/* From Uiverse.io by chandrasek_6406 */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.steampunk-search-body {
+  display: grid;
+  place-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.grid,
+.white,
+.darkBorderBg,
+.glow,
+#pink-mask,
+#input-mask,
+.filterBorder {
+  display: none;
+}
+
+#poda {
+  position: relative;
+  width: 333px;
+  height: 64px;
+  background: linear-gradient(145deg, #a77b5a, #825e41);
+  border: 4px solid #2d241d;
+  border-radius: 4px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6), 6px 6px 0px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+}
+
+#main {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  background: #2d241d;
+  border-radius: 2px;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8);
+}
+
+.steampunk-input {
+  width: 100%;
+  height: 100%;
+  padding: 0 45px 0 50px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 18px;
+  color: #e4d5c7;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+
+.steampunk-input:focus {
+  outline: none;
+  color: #fff;
+}
+
+.steampunk-input::placeholder {
+  color: #9c8c7e;
+  opacity: 1;
+}
+
+.border {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.border::before {
+  top: -16px;
+  left: -16px;
+}
+
+.border::after {
+  bottom: -16px;
+  right: -16px;
+}
+
+#poda:focus-within > .border::before,
+#poda:focus-within > .border::after {
+  color: #d4ac8e;
+}
+
+#poda:focus-within > .border::before {
+  animation: spin 2s linear infinite;
+}
+
+#poda:focus-within > .border::after {
+  animation: spin-reverse 2s linear infinite;
+}
+
+#search-icon,
+#filter-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+}
+
+#search-icon {
+  left: 12px;
+  pointer-events: none;
+}
+
+#filter-icon {
+  right: 0;
+  height: 100%;
+  width: 42px;
+  background: linear-gradient(145deg, #6c5441, #574334);
+  cursor: pointer;
+  border-left: 2px solid #2d241d;
+}
+
+#filter-icon:active {
+  background: linear-gradient(145deg, #574334, #6c5441);
+}
+
+#search-icon svg circle,
+#search-icon svg line {
+  stroke: #d4ac8e;
+  stroke-width: 2.5;
+  filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.7));
+}
+
+#search-icon svg defs {
+  display: none;
+}
+
+#filter-icon svg path {
+  stroke: #d4ac8e;
+  stroke-width: 1.5;
+  filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.7));
+}
