@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,10 +10,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
-export default function ReplyPage() {
+function ReplyPageFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+        <p className="text-gray-600">Loading reply...</p>
+      </div>
+    </div>
+  );
+}
+
+function ReplyPageContent() {
   const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
-  const [originalMessage, setOriginalMessage] = useState<HonkMessage & { sender_username?: string; sender_rank?: string } | null>(null);
+  const [originalMessage, setOriginalMessage] = useState<
+    (HonkMessage & { sender_username?: string; sender_rank?: string }) | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -28,7 +41,7 @@ export default function ReplyPage() {
       try {
         const response = await fetch(`/api/messages/${replyToId}`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
           },
         });
 
@@ -61,7 +74,7 @@ export default function ReplyPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
         body: JSON.stringify(replyData),
       });
@@ -100,7 +113,9 @@ export default function ReplyPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Please log in to reply</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Please log in to reply
+          </h1>
           <Link href="/login">
             <Button>Login</Button>
           </Link>
@@ -114,7 +129,9 @@ export default function ReplyPage() {
       <div className="min-h-screen flex items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="p-6 text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Invalid Reply Link</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Invalid Reply Link
+            </h2>
             <p className="text-gray-600 mb-4">
               The reply link is missing required information.
             </p>
@@ -159,7 +176,9 @@ export default function ReplyPage() {
       <div className="min-h-screen flex items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="p-6 text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Message Not Found</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Message Not Found
+            </h2>
             <p className="text-gray-600 mb-4">
               The original message could not be found.
             </p>
@@ -188,3 +207,12 @@ export default function ReplyPage() {
     </div>
   );
 }
+
+export default function ReplyPage() {
+  return (
+    <Suspense fallback={<ReplyPageFallback />}>
+      <ReplyPageContent />
+    </Suspense>
+  );
+}
+
