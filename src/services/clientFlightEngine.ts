@@ -54,8 +54,8 @@ export class ClientFlightEngine {
       // Generate random weather
       const initialWeather = this.generateRandomWeather(startLocation);
       
-      // Calculate estimated duration (base speed 50 km/h)
-      const baseSpeed = 50;
+      // Calculate estimated duration (base speed 5000 km/h for demo)
+      const baseSpeed = 5000; // 100x faster than normal for demo
       const weatherSpeed = baseSpeed * (initialWeather?.speed_modifier || 1);
       const estimatedDuration = (totalDistance / weatherSpeed) * 60 * 60 * 1000; // ms
 
@@ -99,7 +99,7 @@ export class ClientFlightEngine {
     const flight = this.activeFlights.get(messageId);
     if (!flight) return;
 
-    const updateInterval = 2000; // Update every 2 seconds for demo
+    const updateInterval = 200; // Update every 0.2 seconds for super fast demo
     
     const timer = setInterval(() => {
       this.updateFlightProgress(messageId);
@@ -119,8 +119,8 @@ export class ClientFlightEngine {
     const elapsed = now - flight.startTime;
     const totalDuration = flight.record.estimated_duration;
     
-    // Calculate progress (0-100%)
-    let progress = (elapsed / totalDuration) * 100;
+    // Calculate progress (0-100%) with 100x speed multiplier for demo
+    let progress = (elapsed / totalDuration) * 100 * 100; // 100x speed multiplier
     progress = Math.min(100, progress);
 
     // Update position along route
@@ -129,8 +129,17 @@ export class ClientFlightEngine {
       progress / 100
     );
 
-    // Occasionally generate new weather events
-    if (Math.random() < 0.1) { // 10% chance each update
+    // Check if we've crossed into a new geographic region
+    const lastWeatherEvent = flight.record.weather_events[flight.record.weather_events.length - 1];
+    const lastPosition = lastWeatherEvent?.location;
+    
+    // Simple check for crossing regions (significant lat/long change, roughly state/country sized)
+    const significantMove = lastPosition && (
+      Math.abs(lastPosition.latitude - newPosition.latitude) > 5 || // ~500km latitude change
+      Math.abs(lastPosition.longitude - newPosition.longitude) > 5  // ~500km longitude change at equator
+    );
+
+    if (!lastPosition || significantMove) {
       const newWeather = this.generateRandomWeather(newPosition);
       if (newWeather) {
         flight.record.weather_events.push(newWeather);

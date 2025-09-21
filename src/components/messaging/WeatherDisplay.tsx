@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { weatherService, WeatherCondition } from '@/services/weather';
 import { LocationData, WeatherEvent } from '@/types';
+import { GeolocationService, GeolocationError } from '@/services/geolocation';
 
 interface WeatherDisplayProps {
     location?: LocationData;
@@ -68,7 +69,30 @@ export function WeatherDisplay({ location, className = '' }: WeatherDisplayProps
     const [weather, setWeather] = useState<WeatherEvent | null>(null);
     const [loading, setLoading] = useState(false);
     const [selectedCity, setSelectedCity] = useState<string>('New York');
-    const [flightSpeed, setFlightSpeed] = useState<number>(50); // Base speed
+    const [flightSpeed, setFlightSpeed] = useState<number>(50);
+    const [userLocation, setUserLocation] = useState<LocationData | null>(null);
+    const [locationError, setLocationError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const getUserLocation = async () => {
+            try {
+                setLoading(true);
+                const location = await GeolocationService.getCurrentLocation();
+                setUserLocation(location);
+                setLocationError(null);
+                await fetchWeather(location);
+            } catch (error) {
+                setLocationError((error as GeolocationError).message);
+                // Fallback to New York if location access is denied
+                const defaultLocation = DEMO_LOCATIONS[selectedCity as keyof typeof DEMO_LOCATIONS];
+                await fetchWeather(defaultLocation);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        getUserLocation();
+    }, []);
 
     const fetchWeather = async (loc: LocationData) => {
         setLoading(true);
@@ -112,22 +136,49 @@ export function WeatherDisplay({ location, className = '' }: WeatherDisplayProps
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-                {/* City Selector (if no location provided) */}
-                {!location && (
-                    <div className="flex flex-wrap gap-2">
-                        {Object.keys(DEMO_LOCATIONS).map((city) => (
+                {/* Location Status */}
+                <div className="space-y-2">
+                    {userLocation ? (
+                        <div className="flex items-center justify-between p-2 bg-green-50 text-green-700 rounded-lg text-sm">
+                            <div className="flex items-center gap-2">
+                                <span>📍</span>
+                                <span>Using your current location</span>
+                            </div>
                             <Button
-                                key={city}
-                                variant={selectedCity === city ? 'default' : 'outline'}
+                                variant="ghost"
                                 size="sm"
-                                onClick={() => handleCityChange(city)}
-                                disabled={loading}
+                                onClick={() => setUserLocation(null)}
+                                className="text-green-700 hover:text-green-800"
                             >
-                                {city}
+                                Change
                             </Button>
-                        ))}
-                    </div>
-                )}
+                        </div>
+                    ) : locationError ? (
+                        <div className="flex items-center justify-between p-2 bg-orange-50 text-orange-700 rounded-lg text-sm">
+                            <div className="flex items-center gap-2">
+                                <span>⚠️</span>
+                                <span>{locationError}</span>
+                            </div>
+                        </div>
+                    ) : null}
+                    
+                    {/* City Selector (if no user location) */}
+                    {!userLocation && (
+                        <div className="flex flex-wrap gap-2">
+                            {Object.keys(DEMO_LOCATIONS).map((city) => (
+                                <Button
+                                    key={city}
+                                    variant={selectedCity === city ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => handleCityChange(city)}
+                                    disabled={loading}
+                                >
+                                    {city}
+                                </Button>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
                 {/* Weather Display */}
                 {loading ? (

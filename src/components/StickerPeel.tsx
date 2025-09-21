@@ -79,9 +79,13 @@ const StickerPeel = ({
     draggableInstanceRef.current = Draggable.create(target, {
       type: 'x,y',
       inertia: false,
+      bounds: null, // Allow dragging anywhere
+      zIndexBoost: true,
       onDragStart() {
         setIsDragging(true);
         onDragStart?.();
+        // Ensure the dragged sticker is on top
+        gsap.set(target, { zIndex: 9999 });
       },
       onDrag() {
         const rot = gsap.utils.clamp(-24, 24, this.deltaX * 0.4);
@@ -221,7 +225,15 @@ const StickerPeel = ({
   ]);
 
   return (
-    <div className={`draggable ${className}`} ref={dragTargetRef} style={cssVars}>
+    <div 
+      className={`draggable ${className}`} 
+      ref={dragTargetRef} 
+      style={{
+        ...cssVars,
+        position: 'fixed',
+        zIndex: 9999,
+        pointerEvents: 'auto',
+      }}>
       <svg width="0" height="0">
         <defs>
           <filter id="pointLight">

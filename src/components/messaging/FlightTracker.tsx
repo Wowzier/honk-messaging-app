@@ -13,8 +13,11 @@ const Progress = ({ value, className }: { value: number; className?: string }) =
   </div>
 );
 import { clientFlightEngine } from '@/services/clientFlightEngine';
-
 import { LocationData, FlightProgress, WeatherEvent } from '@/types';
+import { GeolocationService } from '@/services/geolocation';
+import { weatherService } from '@/services/weather';
+import { getLocationDescription, getDirectionDescription } from '@/utils/location-utils';
+import { FlightMap } from './FlightMap';
 
 interface FlightTrackerProps {
   messageId?: string;
@@ -22,6 +25,37 @@ interface FlightTrackerProps {
   endLocation?: LocationData;
   className?: string;
 }
+
+const DEMO_LOCATIONS = {
+  'New York': {
+    latitude: 40.7128,
+    longitude: -74.0060,
+    state: 'New York',
+    country: 'United States',
+    is_anonymous: false
+  },
+  'London': {
+    latitude: 51.5074,
+    longitude: -0.1278,
+    state: 'London',
+    country: 'United Kingdom',
+    is_anonymous: false
+  },
+  'Tokyo': {
+    latitude: 35.6762,
+    longitude: 139.6503,
+    state: 'Tokyo',
+    country: 'Japan',
+    is_anonymous: false
+  },
+  'Sydney': {
+    latitude: -33.8688,
+    longitude: 151.2093,
+    state: 'New South Wales',
+    country: 'Australia',
+    is_anonymous: false
+  }
+};
 
 const DEMO_ROUTES = {
   'NYC → London': {
@@ -85,21 +119,82 @@ export function FlightTracker({
   const [selectedRoute, setSelectedRoute] = useState<string>('NYC → London');
   const [flightId, setFlightId] = useState<string>('');
   const [weatherEvents, setWeatherEvents] = useState<WeatherEvent[]>([]);
+  const [userLocation, setUserLocation] = useState<LocationData | null>(null);
+  const [destinationCity, setDestinationCity] = useState<string>('London');
+  const [flightLogs, setFlightLogs] = useState<Array<{
+    timestamp: Date;
+    message: string;
+    type: 'info' | 'weather' | 'milestone';
+  }>>([]);
 
-  const startDemoFlight = async (routeName: string) => {
-    const route = DEMO_ROUTES[routeName as keyof typeof DEMO_ROUTES];
+  useEffect(() => {
+    const getUserLocation = async () => {
+      try {
+        const location = await GeolocationService.getCurrentLocation();
+        setUserLocation(location);
+      } catch (error) {
+        console.error('Failed to get user location:', error);
+        // Fallback to NYC
+        setUserLocation(DEMO_LOCATIONS['New York']);
+      }
+    };
+
+    getUserLocation();
+  }, []);
+
+  const startDemoFlight = async () => {
+    if (!userLocation) return;
+    
+    const destination = DEMO_LOCATIONS[destinationCity as keyof typeof DEMO_LOCATIONS];
     const demoFlightId = `demo-flight-${Date.now()}`;
     
-    setFlightId(demoFlightId);
-    setIsFlightActive(true);
-    setFlightProgress(null);
-    setWeatherEvents([]);
-
     try {
+      // Initialize flight first
+      const flight = await clientFlightEngine.initializeFlight(
+        demoFlightId,
+        userLocation,
+        DEMO_LOCATIONS[destinationCity as keyof typeof DEMO_LOCATIONS]
+      );
+
+      if (!flight) {
+        throw new Error('Failed to initialize flight');
+      }
+
+      // Now that we have a valid flight, set up the UI state
+      setFlightId(demoFlightId);
+      setIsFlightActive(true);
+      setFlightProgress({
+        message_id: demoFlightId,
+        current_position: flight.current_position,
+        progress_percentage: flight.progress_percentage,
+        estimated_arrival: flight.estimated_arrival,
+        current_weather: flight.weather_events[flight.weather_events.length - 1]
+      });
+      setWeatherEvents(flight.weather_events);
+      setFlightLogs([{
+        timestamp: new Date(),
+        message: `🚀 Starting flight from your location to ${destinationCity}`,
+        type: 'info'
+      }]);
+      
       // Register progress callback
       clientFlightEngine.onFlightProgress(demoFlightId, (progress) => {
         setFlightProgress(progress);
         
+        // Add location update to logs
+        const locationDesc = getLocationDescription(progress.current_position);
+        const destLocation = DEMO_LOCATIONS[destinationCity as keyof typeof DEMO_LOCATIONS];
+        const directionDesc = getDirectionDescription(progress.current_position, destLocation);
+        
+        setFlightLogs(prev => [
+          ...prev,
+          {
+            timestamp: new Date(),
+            message: `🦆 Your duck is ${locationDesc}, ${directionDesc}`,
+            type: 'info'
+          }
+        ]);
+
         // Collect weather events
         if (progress.current_weather) {
           setWeatherEvents(prev => {
@@ -107,28 +202,39 @@ export function FlightTracker({
               w.timestamp.getTime() === progress.current_weather!.timestamp.getTime()
             );
             if (!exists) {
+              // Add weather event to logs
+              setFlightLogs(logs => [
+                ...logs,
+                {
+                  timestamp: new Date(),
+                  message: `🌤️ Weather update: ${weatherService.getWeatherSummary(progress.current_weather!)}`,
+                  type: 'weather'
+                }
+              ]);
               return [...prev, progress.current_weather!];
             }
             return prev;
           });
         }
+
+        // Add milestone updates
+        if (progress.progress_percentage % 25 === 0) {
+          setFlightLogs(logs => [
+            ...logs,
+            {
+              timestamp: new Date(),
+              message: `🎯 Flight milestone: ${progress.progress_percentage}% complete!`,
+              type: 'milestone'
+            }
+          ]);
+        }
       });
-
-      // Initialize flight
-      const flight = await clientFlightEngine.initializeFlight(
-        demoFlightId,
-        route.start,
-        route.end
-      );
-
-      if (!flight) {
-        throw new Error('Failed to initialize flight');
-      }
 
       console.log('Demo flight started:', flight);
     } catch (error) {
       console.error('Failed to start demo flight:', error);
       setIsFlightActive(false);
+      setFlightProgress(null);
     }
   };
 
@@ -136,6 +242,16 @@ export function FlightTracker({
     if (flightId) {
       clientFlightEngine.cancelFlight(flightId);
       clientFlightEngine.removeFlightCallback(flightId);
+      
+      // Add final log entry
+      setFlightLogs(prev => [
+        ...prev,
+        {
+          timestamp: new Date(),
+          message: '🛑 Flight tracking stopped',
+          type: 'info'
+        }
+      ]);
     }
     setIsFlightActive(false);
     setFlightProgress(null);
@@ -190,26 +306,57 @@ export function FlightTracker({
       <CardContent className="space-y-4">
         {/* Route Selector */}
         {!isFlightActive && (
-          <div className="space-y-3">
-            <div className="text-sm font-medium">Select Demo Route:</div>
-            <div className="flex flex-wrap gap-2">
-              {Object.keys(DEMO_ROUTES).map((route) => (
-                <Button
-                  key={route}
-                  variant={selectedRoute === route ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedRoute(route)}
+          <div className="space-y-4">
+            {userLocation ? (
+              <>
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📍</span>
+                    <div>
+                      <div className="font-medium">Your Location</div>
+                      <div className="text-sm text-gray-600">
+                        {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Select Destination:</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.keys(DEMO_LOCATIONS)
+                      .filter(city => 
+                        JSON.stringify(DEMO_LOCATIONS[city as keyof typeof DEMO_LOCATIONS]) !== 
+                        JSON.stringify(userLocation)
+                      )
+                      .map((city) => (
+                        <Button
+                          key={city}
+                          variant={destinationCity === city ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setDestinationCity(city)}
+                          className="w-full"
+                        >
+                          {city}
+                        </Button>
+                      ))}
+                  </div>
+                </div>
+                
+                <Button 
+                  onClick={() => startDemoFlight()}
+                  className="w-full"
+                  size="lg"
                 >
-                  {route}
+                  🚀 Start Flight to {destinationCity}
                 </Button>
-              ))}
-            </div>
-            <Button 
-              onClick={() => startDemoFlight(selectedRoute)}
-              className="w-full"
-            >
-              🚀 Start Demo Flight
-            </Button>
+              </>
+            ) : (
+              <div className="p-4 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3" />
+                <div className="text-sm text-gray-600">Getting your location...</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -291,18 +438,71 @@ export function FlightTracker({
               </div>
             )}
 
-            {/* Weather Events Log */}
+            {/* Flight Map */}
+            {flightProgress && (
+              <div className="mb-6">
+                <FlightMap
+                  currentPosition={flightProgress.current_position}
+                  startLocation={userLocation!}
+                  endLocation={DEMO_LOCATIONS[destinationCity as keyof typeof DEMO_LOCATIONS]}
+                  waypoints={[]}
+                  className="mb-4"
+                />
+              </div>
+            )}
+
+            {/* Flight Logs */}
+            <div className="space-y-2">
+              <div className="text-sm font-medium flex items-center justify-between">
+                <span>Flight Logs</span>
+                {flightLogs.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFlightLogs([])}
+                    className="text-xs"
+                  >
+                    Clear logs
+                  </Button>
+                )}
+              </div>
+              <div className="max-h-48 overflow-y-auto space-y-2 bg-gray-50 rounded-lg p-3">
+                {flightLogs.length === 0 ? (
+                  <div className="text-sm text-gray-500 text-center py-2">
+                    Waiting for flight updates...
+                  </div>
+                ) : (
+                  flightLogs.slice().reverse().map((log, index) => (
+                    <div 
+                      key={index} 
+                      className={`text-sm p-2 rounded-lg transition-all duration-300 ${
+                        log.type === 'weather' ? 'bg-blue-50 text-blue-700' :
+                        log.type === 'milestone' ? 'bg-green-50 text-green-700' :
+                        'bg-white text-gray-700'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <span>{log.message}</span>
+                        <span className="text-xs text-gray-500 whitespace-nowrap">
+                          {log.timestamp.toLocaleTimeString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            
+            {/* Weather Events Summary */}
             {weatherEvents.length > 0 && (
               <div className="space-y-2">
-                <div className="text-sm font-medium">Weather Events</div>
-                <div className="max-h-32 overflow-y-auto space-y-1">
-                  {weatherEvents.slice(-5).map((event, index) => (
-                    <div key={index} className="text-xs p-2 bg-gray-100 rounded">
-                      <span className="mr-2">{getWeatherIcon(event.type)}</span>
-                      {weatherService.getWeatherSummary(event)} - 
-                      Speed: {Math.round((event.speed_modifier - 1) * 100)}%
-                    </div>
-                  ))}
+                <div className="text-sm font-medium">Weather Summary</div>
+                <div className="text-xs p-2 bg-blue-50 rounded-lg">
+                  <div className="font-medium mb-1">Current Conditions:</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{getWeatherIcon(weatherEvents[weatherEvents.length - 1].type)}</span>
+                    <span>{weatherService.getWeatherSummary(weatherEvents[weatherEvents.length - 1])}</span>
+                  </div>
                 </div>
               </div>
             )}

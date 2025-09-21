@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import StickerPeel from '../../components/StickerPeel';
 import { Button } from '@/components/ui/button';
+import './page.css';
 import {
   Select,
   SelectContent,
@@ -55,21 +56,25 @@ export default function PostcardPage() {
     { src: "/sticker.png", alt: "Sticker 3" },
     { src: "/sticker.png", alt: "Sticker 4" },
     { src: "/sticker.png", alt: "Sticker 5" },
-    { src: "/sticker.png", alt: "Sticker 6" },
   ];
 
   // Sticker data with random rotations for scattered effect
   const stickerData = [
     { rotation: -15, hueRotate: 0 },
-    { rotation: 25, hueRotate: 60 },
-    { rotation: -8, hueRotate: 120 },
-    { rotation: 18, hueRotate: 180 },
-    { rotation: -22, hueRotate: 240 },
-    { rotation: 12, hueRotate: 300 },
+    { rotation: 25, hueRotate: 72 },
+    { rotation: -8, hueRotate: 144 },
+    { rotation: 18, hueRotate: 216 },
+    { rotation: -22, hueRotate: 288 },
   ];
 
   const handleStickerDrop = (x: number, y: number, stickerIndex: number) => {
     if (!postcardRef) return;
+
+    // Check if we already have 5 stickers
+    if (placedStickers.length >= 5) {
+      console.log('Maximum stickers reached');
+      return;
+    }
 
     const postcardRect = postcardRef.getBoundingClientRect();
 
@@ -194,12 +199,27 @@ export default function PostcardPage() {
       `}</style>
 
       <div
-        className="h-screen w-full overflow-hidden"
+        className="fixed inset-0 w-full h-full"
         style={{
-          backgroundImage: "url('/background.svg')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
+          pointerEvents: 'none',
+          zIndex: 0
+        }}
+      >
+        <div
+          className="h-full w-full"
+          style={{
+            backgroundImage: "url('/background.svg')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        />
+      </div>
+      <div
+        className="relative w-full h-screen"
+        style={{
+          pointerEvents: 'all',
+          zIndex: 1
         }}
       >
         {/* Craft Table Container */}
@@ -207,31 +227,38 @@ export default function PostcardPage() {
 
           {/* Postcard in the center */}
           <div className="relative flex items-center">
-            {/* All 6 stickers on the left side in a single column */}
-            <div className="absolute -left-80 top-0 w-80 h-screen overflow-visible flex flex-col">
+            {/* All 5 stickers on the left side in a single column */}
+            <div className="absolute -left-80 top-0 w-80 h-screen overflow-visible flex flex-col" style={{ zIndex: 20 }}>
               <div className="text-center pt-8 pb-4" style={{ fontFamily: 'cursive, "Comic Sans MS", sans-serif' }}>
                   <h1 className="text-6xl font-bold" style={{ color: '#5a3825', textShadow: '2px 2px 0px #fff, -2px -2px 0px #fff, 2px -2px 0px #fff, -2px 2px 0px #fff' }}>Stickers!</h1>
                   <p className="text-xl" style={{ color: '#5a3825' }}>drag and drop!</p>
               </div>
-              <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'linear-gradient(to top, rgba(255, 221, 193, 0.5), transparent)'}}>
-                <LogoLoop
-                  logos={stickerLogos}
-                  speed={120}
-                  direction="up"
-                  logoWidth={192}
-                  gap={40}
-                  pauseOnHover
-                  scaleOnHover
-                  fadeOut
-                  fadeOutColor="#fbf9f4"
-                  ariaLabel="Stickers"
-                />
+              <div style={{ 
+                  flex: 1, 
+                  position: 'relative', 
+                  background: 'linear-gradient(to top, rgba(255, 221, 193, 0.5), transparent)',
+                }}>
+                <div style={{ overflow: 'hidden' }}>
+                  <LogoLoop
+                    logos={stickerLogos}
+                    speed={80}
+                    direction="up"
+                    logoWidth={192}
+                    gap={120}
+                    pauseOnHover
+                    scaleOnHover
+                    fadeOut
+                    fadeOutColor="#fbf9f4"
+                    ariaLabel="Stickers"
+                  />
+                </div>
               </div>
             </div>
+
             {/* Postcard */}
             <div
               ref={setPostcardRef}
-              className="bg-white border border-gray-400 relative"
+              className="postcard-area bg-white border border-gray-400 relative"
               style={{
                 width: '600px',
                 height: '400px',
@@ -361,6 +388,7 @@ export default function PostcardPage() {
                     left: sticker.x - 64,
                     top: sticker.y - 64,
                     filter: `hue-rotate(${sticker.hueRotate}deg)`,
+                    zIndex: 10,
                   }}
                 >
                   <StickerPeel

@@ -181,13 +181,34 @@ export class FlightEngine {
 
       // Update flight record
       flight.record.current_position = newPosition.position;
-      flight.record.progress_percentage = newPosition.progress;
+      flight.record.progress_percentage = Math.min(newPosition.progress, 100); // Ensure we don't exceed 100%
       flight.record.speed_kmh = currentSpeed;
       flight.record.updated_at = new Date();
       flight.lastUpdate = now;
 
-      // Check if flight is complete
-      if (flight.record.progress_percentage >= 100) {
+      // Log detailed progress
+      console.log(`
+🦆 Flight ${messageId} Update:
+   Progress: ${flight.record.progress_percentage.toFixed(2)}%
+   Speed: ${currentSpeed.toFixed(2)} km/h
+   Position: [${newPosition.position.latitude.toFixed(4)}, ${newPosition.position.longitude.toFixed(4)}]
+   Distance covered: ${distanceTraveled.toFixed(2)}km
+      `);
+
+      // Check for arrival at destination
+      const destination = flight.route.waypoints[flight.route.waypoints.length - 1];
+      const distanceToDestination = calculateDistance(
+        flight.record.current_position,
+        {
+          latitude: destination.latitude,
+          longitude: destination.longitude,
+          is_anonymous: false
+        }
+      );
+
+      // Complete flight if we're very close to destination or progress is 100%
+      if (distanceToDestination < 0.1 || flight.record.progress_percentage >= 99.99) {
+        console.log(`🎯 Flight ${messageId} has reached destination! (Distance remaining: ${distanceToDestination.toFixed(2)}km)`);
         await this.completeFlight(messageId);
         return;
       }
@@ -237,6 +258,14 @@ export class FlightEngine {
       totalDistance
     );
 
+    console.log(`
+📏 Route Calculations:
+   Total route distance: ${totalDistance.toFixed(2)}km
+   Current distance: ${currentDistanceAlongRoute.toFixed(2)}km
+   New distance: ${newDistanceAlongRoute.toFixed(2)}km
+   Progress: ${((newDistanceAlongRoute / totalDistance) * 100).toFixed(2)}%
+    `);
+
     // Find which segment we're in
     let accumulatedDistance = 0;
     for (let i = 0; i < waypoints.length - 1; i++) {
@@ -254,6 +283,15 @@ export class FlightEngine {
           is_anonymous: false
         }
       );
+
+      // Log waypoint information
+      console.log(`
+🛣️ Route Segment ${i + 1}/${waypoints.length - 1}:
+   Start: [${segmentStart.latitude.toFixed(4)}, ${segmentStart.longitude.toFixed(4)}]
+   End: [${segmentEnd.latitude.toFixed(4)}, ${segmentEnd.longitude.toFixed(4)}]
+   Distance: ${segmentDistance.toFixed(2)}km
+   Accumulated: ${accumulatedDistance.toFixed(2)}km
+      `);
 
       if (newDistanceAlongRoute <= accumulatedDistance + segmentDistance) {
         // We're in this segment

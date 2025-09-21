@@ -473,12 +473,26 @@ export class FlightRoutingService {
    */
   calculateRoute(start: LocationData, end: LocationData): PathResult | null {
     try {
+      console.log(`
+🗺️ Calculating route:
+   From: [${start.latitude.toFixed(4)}, ${start.longitude.toFixed(4)}]
+   To: [${end.latitude.toFixed(4)}, ${end.longitude.toFixed(4)}]
+      `);
+
       // Generate waypoints along great circle route
       const waypoints = this.generateWaypoints(start, end);
       
       if (waypoints.length === 0) {
+        console.log('❌ Failed to generate waypoints');
         return null;
       }
+
+      console.log(`
+📍 Generated ${waypoints.length} waypoints along great circle route
+   Initial terrain types:
+   - Start: ${waypoints[0].terrain} (${waypoints[0].altitude}m)
+   - End: ${waypoints[waypoints.length - 1].terrain} (${waypoints[waypoints.length - 1].altitude}m)
+      `);
 
       // For simple cases (2 waypoints), return direct route
       if (waypoints.length === 2) {
@@ -490,6 +504,13 @@ export class FlightRoutingService {
           timestamp: new Date(Date.now() + index * 60000)
         }));
 
+        console.log(`
+🛫 Using direct route:
+   Distance: ${totalDistance.toFixed(2)}km
+   Terrain: ${waypoints[0].terrain} → ${waypoints[1].terrain}
+   Altitude: ${waypoints[0].altitude}m → ${waypoints[1].altitude}m
+        `);
+
         return {
           path: waypoints,
           totalDistance,
@@ -498,6 +519,10 @@ export class FlightRoutingService {
         };
       }
       
+      console.log(`
+🔄 Complex route detected, analyzing terrain and building route graph...
+      `);
+
       // Build graph with waypoints
       this.buildGraph(waypoints);
       
@@ -505,7 +530,28 @@ export class FlightRoutingService {
       const startId = waypoints[0].id;
       const endId = waypoints[waypoints.length - 1].id;
       
-      return this.findOptimalPath(startId, endId);
+      console.log(`
+🧮 Running Dijkstra's algorithm:
+   - Analyzing ${waypoints.length} waypoints
+   - Considering terrain types: ${Array.from(new Set(waypoints.map(w => w.terrain))).join(', ')}
+   - Altitude range: ${Math.min(...waypoints.map(w => w.altitude))}m to ${Math.max(...waypoints.map(w => w.altitude))}m
+      `);
+      
+      const result = this.findOptimalPath(startId, endId);
+      
+      if (result) {
+        console.log(`
+✅ Route calculation complete:
+   - Total distance: ${result.totalDistance.toFixed(2)}km
+   - Waypoints used: ${result.path.length}
+   - Terrain changes: ${result.path.map(node => node.terrain).join(' → ')}
+   - Average altitude: ${(result.path.reduce((sum, node) => sum + node.altitude, 0) / result.path.length).toFixed(0)}m
+        `);
+      } else {
+        console.log('❌ Failed to find optimal path');
+      }
+      
+      return result;
     } catch (error) {
       console.error('Error calculating route:', error);
       return null;
@@ -520,20 +566,47 @@ export class FlightRoutingService {
     destination: LocationData,
     avoidAreas?: LocationData[]
   ): PathResult | null {
+    console.log(`
+🔄 Recalculating route due to conditions:
+   From: [${currentPosition.latitude.toFixed(4)}, ${currentPosition.longitude.toFixed(4)}]
+   To: [${destination.latitude.toFixed(4)}, ${destination.longitude.toFixed(4)}]
+   Avoid areas: ${avoidAreas ? avoidAreas.length : 0}
+    `);
+
     // Generate new waypoints from current position
     const waypoints = this.generateWaypoints(currentPosition, destination);
     
     // Filter out waypoints in avoid areas if specified
     if (avoidAreas && avoidAreas.length > 0) {
+      console.log(`
+⚠️ Avoiding areas:
+   ${avoidAreas.map((area, i) => 
+     `${i + 1}. [${area.latitude.toFixed(4)}, ${area.longitude.toFixed(4)}]`
+   ).join('\n   ')}
+      `);
+
       const filteredWaypoints = waypoints.filter(waypoint => {
-        return !avoidAreas.some(avoidArea => {
+        const isAvoided = avoidAreas.some(avoidArea => {
           const distance = calculateDistance(waypoint.location, avoidArea);
           return distance < 100; // Avoid areas within 100km
         });
+        
+        if (isAvoided) {
+          console.log(`🚫 Avoiding waypoint at [${waypoint.location.latitude.toFixed(4)}, ${waypoint.location.longitude.toFixed(4)}]`);
+        }
+        
+        return !isAvoided;
       });
+      
+      console.log(`
+📊 Route adjustment:
+   Original waypoints: ${waypoints.length}
+   After filtering: ${filteredWaypoints.length}
+      `);
       
       // If we filtered out too many waypoints, use original route
       if (filteredWaypoints.length < 2) {
+        console.log('⚠️ Too many waypoints filtered out, reverting to original route');
         return this.calculateRoute(currentPosition, destination);
       }
       
