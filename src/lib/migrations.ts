@@ -145,13 +145,20 @@ export const migrations: Migration[] = [
     version: 6,
     name: 'add_authentication_fields_to_users',
     up: (db: Database) => {
-      // Add new columns to users table
-      db.exec(`
-        ALTER TABLE users ADD COLUMN email TEXT;
-        ALTER TABLE users ADD COLUMN username TEXT;
-        ALTER TABLE users ADD COLUMN password_hash TEXT;
-      `);
-      
+      const columns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+      const columnNames = new Set(columns.map(column => column.name));
+
+      const ensureColumn = (definition: string, name: string) => {
+        if (!columnNames.has(name)) {
+          db.exec(`ALTER TABLE users ADD COLUMN ${definition};`);
+          columnNames.add(name);
+        }
+      };
+
+      ensureColumn('email TEXT', 'email');
+      ensureColumn('username TEXT', 'username');
+      ensureColumn('password_hash TEXT', 'password_hash');
+
       // Create unique indexes for email and username
       db.exec(`
         CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -297,14 +304,22 @@ export const migrations: Migration[] = [
     version: 12,
     name: 'extend_user_statistics',
     up: (db: Database) => {
-      db.exec(`
-        ALTER TABLE users ADD COLUMN total_flights_sent INTEGER NOT NULL DEFAULT 0;
-        ALTER TABLE users ADD COLUMN total_flights_received INTEGER NOT NULL DEFAULT 0;
-        ALTER TABLE users ADD COLUMN total_distance_traveled REAL NOT NULL DEFAULT 0;
-        ALTER TABLE users ADD COLUMN countries_visited TEXT NOT NULL DEFAULT '[]';
-        ALTER TABLE users ADD COLUMN states_visited TEXT NOT NULL DEFAULT '[]';
-        ALTER TABLE users ADD COLUMN achievements TEXT NOT NULL DEFAULT '[]';
-      `);
+      const columns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+      const columnNames = new Set(columns.map(column => column.name));
+
+      const ensureColumn = (definition: string, name: string) => {
+        if (!columnNames.has(name)) {
+          db.exec(`ALTER TABLE users ADD COLUMN ${definition};`);
+          columnNames.add(name);
+        }
+      };
+
+      ensureColumn('total_flights_sent INTEGER NOT NULL DEFAULT 0', 'total_flights_sent');
+      ensureColumn('total_flights_received INTEGER NOT NULL DEFAULT 0', 'total_flights_received');
+      ensureColumn('total_distance_traveled REAL NOT NULL DEFAULT 0', 'total_distance_traveled');
+      ensureColumn("countries_visited TEXT NOT NULL DEFAULT '[]'", 'countries_visited');
+      ensureColumn("states_visited TEXT NOT NULL DEFAULT '[]'", 'states_visited');
+      ensureColumn("achievements TEXT NOT NULL DEFAULT '[]'", 'achievements');
     },
     down: (db: Database) => {
       db.exec(`
