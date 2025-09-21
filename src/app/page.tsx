@@ -132,7 +132,7 @@ export default function Home() {
                     transform: 'scale(1.5)', // Adjust scale as needed
                   }}
                 >
-                  <source src="/duck-moving.mp4" type="video/mp4" />
+                  <source src="/duck-moving.webm" type="video/webm" />
                 </video>
               </div>
             </div>
