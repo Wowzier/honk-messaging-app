@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { geolocationService } from '@/services/geolocation';
 import { tailwindAlgorithm } from '@/services/tailwindAlgorithm';
 import { flightEngine } from '@/services/flightEngine';
+import { calculatePostcardLineCount, POSTCARD_MAX_LINES } from '@/utils/postcard';
 
 interface SendMessageRequest {
   title: string;
@@ -48,9 +49,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    if (body.content.length > 280) {
+    const lineCount = calculatePostcardLineCount(body.content.trim());
+    if (lineCount > POSTCARD_MAX_LINES) {
       return NextResponse.json(
-        { error: 'Content must be 280 characters or less' },
+        { error: 'Content must fit within 6 postcard lines' },
         { status: 400 }
       );
     }

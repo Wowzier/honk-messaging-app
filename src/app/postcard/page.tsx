@@ -11,32 +11,33 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import LogoLoop from '@/components/ui/LogoLoop';
+import { calculatePostcardLineCount, POSTCARD_MAX_LINES } from '@/utils/postcard';
 
 export default function PostcardPage() {
   const [message, setMessage] = useState<string>('');
   const [locationSharing, setLocationSharing] = useState<'state' | 'country' | 'anonymous'>('state');
   const [isLoading, setIsLoading] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const [showLineLimitNotice, setShowLineLimitNotice] = useState(false);
 
 
 
-  // Handle message change with visual line limit
+  // Handle message change with precise line counting
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
+    const nextLineCount = calculatePostcardLineCount(text);
 
-    // For now, use a simpler approach - just limit by explicit line breaks and character count
-    const explicitLines = text.split('\n').length;
-    const charCount = text.length;
-
-    // Estimate wrapped lines based on character count and width
-    // Rough estimate: ~50 characters per line for this font size and width
-    const estimatedWrappedLines = Math.ceil(charCount / 50);
-    const totalEstimatedLines = Math.max(explicitLines, estimatedWrappedLines);
-
-    if (totalEstimatedLines <= 6) {
+    if (nextLineCount <= POSTCARD_MAX_LINES) {
       setMessage(text);
+      if (showLineLimitNotice) {
+        setShowLineLimitNotice(false);
+      }
+    } else {
+      setShowLineLimitNotice(true);
+      if (textareaRef.current) {
+        textareaRef.current.value = message;
+      }
     }
-    // If too many lines, don't update (silently reject)
   };
   const [placedStickers, setPlacedStickers] = useState<Array<{
     id: string;
@@ -131,8 +132,16 @@ export default function PostcardPage() {
     }
   };
 
+  const lineCount = React.useMemo(() => calculatePostcardLineCount(message), [message]);
+  const isAtLineLimit = lineCount >= POSTCARD_MAX_LINES;
+
   const handleSendPostcard = async () => {
     if (!message.trim()) return;
+
+    if (lineCount > POSTCARD_MAX_LINES) {
+      setShowLineLimitNotice(true);
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -158,6 +167,7 @@ export default function PostcardPage() {
       // Success! Clear the form
       setMessage('');
       setPlacedStickers([]);
+      setShowLineLimitNotice(false);
 
       // Show success message (you could add a toast notification here)
       alert('Your fall postcard is flying! 🍂✈️');
@@ -260,12 +270,8 @@ export default function PostcardPage() {
                     value={message}
                     onChange={handleMessageChange}
                     onKeyDown={(e) => {
-                      // Prevent new lines after 6 lines
-                      if (e.key === 'Enter') {
-                        const lines = message.split('\n');
-                        if (lines.length >= 6) {
-                          e.preventDefault();
-                        }
+                      if (e.key === 'Enter' && isAtLineLimit) {
+                        e.preventDefault();
                       }
                     }}
                   />
@@ -300,8 +306,15 @@ export default function PostcardPage() {
 
                   {/* Stats and recipient row */}
                   <div className="flex justify-between items-end">
-                    <div className="text-sm text-gray-600">
-                      Lines: {message.trim() === '' ? 0 : Math.max(message.split('\n').length, Math.ceil(message.length / 50))}/6
+                    <div className="text-sm text-gray-600 flex items-center gap-2">
+                      <span>
+                        Lines: {lineCount}/{POSTCARD_MAX_LINES}
+                      </span>
+                      {isAtLineLimit && (
+                        <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                          Max reached
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-gray-500">{message.length} chars</span>
@@ -318,6 +331,24 @@ export default function PostcardPage() {
                       />
                     </div>
                   </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-dashed border-gray-200">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+                      <span>Honk Air Mail</span>
+                    </div>
+                    <Button
+                      onClick={handleSendPostcard}
+                      disabled={!message.trim() || isLoading}
+                      className="bg-amber-500 hover:bg-amber-600 text-white"
+                    >
+                      {isLoading ? 'Sending...' : 'Send Postcard'}
+                    </Button>
+                  </div>
+                  {showLineLimitNotice && (
+                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                      Your note is limited to six postcard lines. Try shortening a sentence or removing a line break.
+                    </p>
+                  )}
                 </div>
               </div>
 
