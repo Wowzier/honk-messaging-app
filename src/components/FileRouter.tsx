@@ -19,6 +19,7 @@ const pages: Page[] = [
   { name: 'Inbox', path: '/inbox' },
   { name: 'Login', path: '/login' },
   { name: 'Postcard', path: '/postcard' },
+  { name: 'Postmail', path: '/postmail' },
   { name: 'Profile', path: '/profile' },
   { name: 'Ranking', path: '/ranking' },
   { name: 'Register', path: '/register' },
