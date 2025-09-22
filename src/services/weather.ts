@@ -31,31 +31,12 @@ export interface OpenMeteoResponse {
   timezone: string;
   timezone_abbreviation: string;
   elevation: number;
-  current_units: {
+  current_weather: {
+    temperature: number;
+    windspeed: number;
+    winddirection: number;
+    weathercode: number;
     time: string;
-    interval: string;
-    temperature_2m: string;
-    relative_humidity_2m: string;
-    precipitation: string;
-    weather_code: string;
-    cloud_cover: string;
-    pressure_msl: string;
-    wind_speed_10m: string;
-    wind_direction_10m: string;
-    wind_gusts_10m: string;
-  };
-  current: {
-    time: string;
-    interval: number;
-    temperature_2m: number;
-    relative_humidity_2m: number;
-    precipitation: number;
-    weather_code: number;
-    cloud_cover: number;
-    pressure_msl: number;
-    wind_speed_10m: number;
-    wind_direction_10m: number;
-    wind_gusts_10m: number;
   };
 }
 
@@ -94,13 +75,13 @@ export class WeatherService {
       }
 
       // Fetch from Open-Meteo API (no API key needed!)
-      const url = `${this.baseUrl}?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m&timezone=auto`;
+      const url = `${this.baseUrl}?latitude=${location.latitude}&longitude=${location.longitude}&current_weather=true&timezone=auto&temperature_unit=fahrenheit`;
 
       const response = await fetch(url);
 
       if (!response.ok) {
         console.warn(`Weather API request failed: ${response.status} ${response.statusText}`);
-        return this.generateSimulatedWeather(location);
+        return null;
       }
 
       const data: OpenMeteoResponse = await response.json();
@@ -112,8 +93,7 @@ export class WeatherService {
       return weatherEvent;
     } catch (error) {
       console.error('Error fetching weather data:', error);
-      // Return simulated weather as fallback
-      return this.generateSimulatedWeather(location);
+      return null;
     }
   }
 
@@ -121,37 +101,125 @@ export class WeatherService {
    * Parse Open-Meteo API response into WeatherEvent
    */
   private parseOpenMeteoResponse(data: OpenMeteoResponse, location: LocationData): WeatherEvent {
-    const current = data.current;
-    const weatherCode = current.weather_code;
-    const windSpeedKmh = current.wind_speed_10m; // Already in km/h
-    const windDirection = current.wind_direction_10m;
-    const precipitation = current.precipitation;
-    const humidity = current.relative_humidity_2m;
+    const current = data.current_weather;
+    const weatherCode = current.weathercode;
+    const windSpeedKmh = current.windspeed; // Already in km/h
+    const windDirection = current.winddirection;
+    const temperature = current.temperature;
 
     // Determine weather type and intensity based on WMO weather codes
     let type: WeatherCondition;
     let intensity: number;
     let speedModifier: number;
 
-    // WMO Weather codes classification
-    if (weatherCode >= 95) { // Thunderstorm codes (95, 96, 99)
-      type = WeatherCondition.STORM;
-      intensity = Math.min(1.0, (humidity / 100) * 1.2 + (precipitation / 10));
-      speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.STORM];
-    } else if (weatherCode >= 51 && weatherCode <= 67) { // Rain/drizzle codes (51-67)
-      type = WeatherCondition.RAIN;
-      intensity = Math.min(1.0, (precipitation / 5) + (humidity / 100));
-      speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.RAIN];
-    } else if (windSpeedKmh > 25) { // Strong wind threshold
+    // WMO Weather interpretation codes (WW)
+    switch (weatherCode) {
+      case 0: // Clear sky
+        type = WeatherCondition.CLEAR;
+        intensity = 0;
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.CLEAR];
+        break;
+
+      case 1: // Mainly clear
+      case 2: // Partly cloudy
+      case 3: // Overcast
+        type = WeatherCondition.CLEAR;
+        intensity = weatherCode / 3; // 0.33 for mainly clear, 0.67 for partly cloudy, 1 for overcast
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.CLEAR];
+        break;
+
+      case 45: // Fog
+      case 48: // Depositing rime fog
+        type = WeatherCondition.WIND;
+        intensity = 0.3;
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.WIND] * 0.8;
+        break;
+
+      case 51: // Drizzle: Light
+      case 53: // Drizzle: Moderate
+      case 55: // Drizzle: Dense
+        type = WeatherCondition.RAIN;
+        intensity = (weatherCode - 51) / 4 + 0.3; // 0.3 to 0.5 intensity
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.RAIN];
+        break;
+
+      case 56: // Freezing Drizzle: Light
+      case 57: // Freezing Drizzle: Dense
+        type = WeatherCondition.RAIN;
+        intensity = weatherCode === 56 ? 0.4 : 0.6;
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.RAIN] * 0.8;
+        break;
+
+      case 61: // Rain: Slight
+      case 63: // Rain: Moderate
+      case 65: // Rain: Heavy
+        type = WeatherCondition.RAIN;
+        intensity = (weatherCode - 61) / 4 + 0.5; // 0.5 to 0.7 intensity
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.RAIN];
+        break;
+
+      case 66: // Freezing Rain: Light
+      case 67: // Freezing Rain: Heavy
+        type = WeatherCondition.RAIN;
+        intensity = weatherCode === 66 ? 0.6 : 0.8;
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.RAIN] * 0.8;
+        break;
+
+      case 71: // Snow fall: Slight
+      case 73: // Snow fall: Moderate
+      case 75: // Snow fall: Heavy
+        type = WeatherCondition.RAIN; // Treating snow as rain for duck flight
+        intensity = (weatherCode - 71) / 4 + 0.4; // 0.4 to 0.6 intensity
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.RAIN] * 0.9;
+        break;
+
+      case 77: // Snow grains
+        type = WeatherCondition.RAIN;
+        intensity = 0.5;
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.RAIN] * 0.9;
+        break;
+
+      case 80: // Rain showers: Slight
+      case 81: // Rain showers: Moderate
+      case 82: // Rain showers: Violent
+        type = WeatherCondition.RAIN;
+        intensity = (weatherCode - 80) / 2 + 0.6; // 0.6 to 0.8 intensity
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.RAIN];
+        break;
+
+      case 85: // Snow showers: Slight
+      case 86: // Snow showers: Heavy
+        type = WeatherCondition.RAIN;
+        intensity = weatherCode === 85 ? 0.5 : 0.7;
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.RAIN] * 0.9;
+        break;
+
+      case 95: // Thunderstorm: Slight or moderate
+        type = WeatherCondition.STORM;
+        intensity = 0.7;
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.STORM];
+        break;
+
+      case 96: // Thunderstorm with slight hail
+      case 99: // Thunderstorm with heavy hail
+        type = WeatherCondition.STORM;
+        intensity = weatherCode === 96 ? 0.8 : 1.0;
+        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.STORM];
+        break;
+
+      default:
+        // Check for strong winds regardless of weather code
+        if (windSpeedKmh > 25) {
       type = WeatherCondition.WIND;
       intensity = Math.min(1.0, windSpeedKmh / 50); // Normalize to 0-1
       // Wind affects speed by ±25% based on direction (simplified)
-      const windEffect = this.calculateWindEffect(windDirection, windSpeedKmh);
-      speedModifier = 1.0 + windEffect;
-    } else {
-      type = WeatherCondition.CLEAR;
-      intensity = 0;
-      speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.CLEAR];
+      speedModifier = 1.0 + this.calculateWindEffect(windDirection, windSpeedKmh);
+        } else {
+          // Default to clear weather
+          type = WeatherCondition.CLEAR;
+          intensity = 0;
+          speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.CLEAR];
+        }
     }
 
     return {
@@ -159,7 +227,13 @@ export class WeatherService {
       intensity,
       speed_modifier: speedModifier,
       location,
-      timestamp: new Date()
+      timestamp: new Date(),
+      details: {
+        temperature: current.temperature,
+        windSpeed: current.windspeed,
+        windDirection: current.winddirection,
+        weatherCode: current.weathercode
+      }
     };
   }
 
@@ -180,81 +254,6 @@ export class WeatherService {
   }
 
   /**
-   * Generate simulated weather data for demo/fallback purposes
-   */
-  private generateSimulatedWeather(location: LocationData): WeatherEvent {
-    const weatherTypes = [
-      WeatherCondition.CLEAR,
-      WeatherCondition.RAIN,
-      WeatherCondition.STORM,
-      WeatherCondition.WIND
-    ];
-
-    // Weight weather types based on location (simplified)
-    const weights = this.getWeatherWeights(location);
-    const type = this.weightedRandomSelect(weatherTypes, weights);
-
-    let intensity: number;
-    let speedModifier: number;
-
-    switch (type) {
-      case WeatherCondition.STORM:
-        intensity = 0.6 + Math.random() * 0.4; // 0.6-1.0
-        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.STORM];
-        break;
-      case WeatherCondition.RAIN:
-        intensity = 0.3 + Math.random() * 0.5; // 0.3-0.8
-        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.RAIN];
-        break;
-      case WeatherCondition.WIND:
-        intensity = 0.4 + Math.random() * 0.6; // 0.4-1.0
-        // Random wind effect ±25%
-        const windEffect = (Math.random() - 0.5) * 0.5; // -0.25 to 0.25
-        speedModifier = 1.0 + windEffect;
-        break;
-      default:
-        intensity = 0;
-        speedModifier = WEATHER_SPEED_MODIFIERS[WeatherCondition.CLEAR];
-    }
-
-    return {
-      type,
-      intensity,
-      speed_modifier: speedModifier,
-      location,
-      timestamp: new Date()
-    };
-  }
-
-  /**
-   * Get weather probability weights based on location
-   */
-  private getWeatherWeights(location: LocationData): number[] {
-    const { latitude, longitude } = location;
-
-    // Simplified weather patterns based on geography
-    // [CLEAR, RAIN, STORM, WIND]
-
-    // Tropical regions (more storms and rain)
-    if (Math.abs(latitude) < 23.5) {
-      return [0.4, 0.3, 0.2, 0.1];
-    }
-
-    // Polar regions (more wind and storms)
-    if (Math.abs(latitude) > 60) {
-      return [0.3, 0.2, 0.2, 0.3];
-    }
-
-    // Ocean areas (more wind)
-    if (this.isOverOcean(latitude, longitude)) {
-      return [0.4, 0.2, 0.1, 0.3];
-    }
-
-    // Default temperate climate
-    return [0.5, 0.25, 0.1, 0.15];
-  }
-
-  /**
    * Simplified ocean detection for weather patterns
    */
   private isOverOcean(latitude: number, longitude: number): boolean {
@@ -263,23 +262,6 @@ export class WeatherService {
     if ((longitude > 140 || longitude < -140) && Math.abs(latitude) < 60) return true;
     if (longitude > 60 && longitude < 100 && latitude > -40 && latitude < 20) return true;
     return false;
-  }
-
-  /**
-   * Weighted random selection
-   */
-  private weightedRandomSelect<T>(items: T[], weights: number[]): T {
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-    let random = Math.random() * totalWeight;
-
-    for (let i = 0; i < items.length; i++) {
-      random -= weights[i];
-      if (random <= 0) {
-        return items[i];
-      }
-    }
-
-    return items[items.length - 1];
   }
 
   /**
@@ -384,19 +366,68 @@ export class WeatherService {
   }
 
   /**
-   * Get weather summary for display
+   * Get weather summary for display based on WMO weather codes
    */
   getWeatherSummary(weather: WeatherEvent): string {
     const intensityDesc = weather.intensity > 0.7 ? 'severe' :
       weather.intensity > 0.4 ? 'moderate' : 'light';
 
+    // Store the weatherCode for more specific descriptions
+    const weatherCode = weather.details?.weatherCode;
+
     switch (weather.type) {
       case WeatherCondition.STORM:
+        if (weatherCode === 96) return 'thunderstorm with slight hail';
+        if (weatherCode === 99) return 'thunderstorm with heavy hail';
         return `${intensityDesc} thunderstorm`;
+        
       case WeatherCondition.RAIN:
-        return `${intensityDesc} rain`;
+        // Drizzle
+        if (weatherCode >= 51 && weatherCode <= 55) {
+          return `${intensityDesc} drizzle`;
+        }
+        // Freezing Drizzle
+        if (weatherCode === 56 || weatherCode === 57) {
+          return `${intensityDesc} freezing drizzle`;
+        }
+        // Regular Rain
+        if (weatherCode >= 61 && weatherCode <= 65) {
+          return `${intensityDesc} rain`;
+        }
+        // Freezing Rain
+        if (weatherCode === 66 || weatherCode === 67) {
+          return `${intensityDesc} freezing rain`;
+        }
+        // Snow
+        if (weatherCode >= 71 && weatherCode <= 75) {
+          return `${intensityDesc} snow`;
+        }
+        if (weatherCode === 77) {
+          return 'snow grains';
+        }
+        // Rain Showers
+        if (weatherCode >= 80 && weatherCode <= 82) {
+          if (weatherCode === 82) return 'violent rain showers';
+          return `${intensityDesc} rain showers`;
+        }
+        // Snow Showers
+        if (weatherCode === 85 || weatherCode === 86) {
+          return `${intensityDesc} snow showers`;
+        }
+        return `${intensityDesc} rain`; // fallback
+
       case WeatherCondition.WIND:
+        if (weatherCode === 45 || weatherCode === 48) {
+          return weatherCode === 48 ? 'freezing fog' : 'fog';
+        }
         return `${intensityDesc} winds`;
+
+      case WeatherCondition.CLEAR:
+        if (weather.intensity > 0.8) return 'overcast';
+        if (weather.intensity > 0.4) return 'partly cloudy';
+        if (weather.intensity > 0) return 'mainly clear';
+        return 'clear skies';
+
       default:
         return 'clear skies';
     }

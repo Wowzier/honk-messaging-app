@@ -69,23 +69,18 @@ export class NotificationService {
   /**
    * Persist notification to database
    */
-  private persistNotification(notification: NotificationRecord): void {
+  private async persistNotification(notification: NotificationRecord): Promise<void> {
     try {
-      const { dbManager } = require('@/lib/database');
-      const db = dbManager.getDatabase();
-      
-      db.prepare(`
-        INSERT INTO notifications (id, user_id, type, title, body, metadata, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        notification.id,
-        notification.user_id,
-        notification.type,
-        notification.title,
-        notification.body,
-        notification.metadata ? JSON.stringify(notification.metadata) : null,
-        notification.created_at.toISOString()
-      );
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...notification,
+          created_at: notification.created_at.toISOString(),
+        }),
+      });
     } catch (error) {
       console.error('Error persisting notification:', error);
     }
@@ -267,17 +262,10 @@ export class NotificationService {
   /**
    * Load notifications from database
    */
-  private loadNotificationsFromDatabase(userId: string): void {
+  private async loadNotificationsFromDatabase(userId: string): Promise<void> {
     try {
-      const { dbManager } = require('@/lib/database');
-      const db = dbManager.getDatabase();
-      
-      const rows = db.prepare(`
-        SELECT * FROM notifications 
-        WHERE user_id = ? 
-        ORDER BY created_at DESC 
-        LIMIT 100
-      `).all(userId);
+      const response = await fetch(`/api/notifications?userId=${encodeURIComponent(userId)}`);
+      const rows = await response.json();
 
       for (const row of rows) {
         const existingIndex = this.notifications.findIndex(n => n.id === row.id);
@@ -310,21 +298,23 @@ export class NotificationService {
   /**
    * Mark notification as read
    */
-  markAsRead(notificationId: string): void {
+  async markAsRead(notificationId: string): Promise<void> {
     const notification = this.notifications.find(n => n.id === notificationId);
     if (notification && !notification.read_at) {
       notification.read_at = new Date();
       
       // Persist to database
       try {
-        const { dbManager } = require('@/lib/database');
-        const db = dbManager.getDatabase();
-        
-        db.prepare(`
-          UPDATE notifications 
-          SET read_at = ? 
-          WHERE id = ?
-        `).run(notification.read_at.toISOString(), notificationId);
+        await fetch('/api/notifications', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            notificationId,
+            readAt: notification.read_at.toISOString(),
+          }),
+        });
       } catch (error) {
         console.error('Error marking notification as read:', error);
       }

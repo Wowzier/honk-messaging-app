@@ -58,12 +58,24 @@ export interface RouteWaypoint {
   timestamp: Date;
 }
 
+export interface WeatherDetails {
+  temperature: number;
+  humidity?: number;
+  precipitation?: number;
+  windSpeed: number;
+  windDirection: number;
+  cloudCover?: number;
+  pressure?: number;
+  weatherCode?: number;
+}
+
 export interface WeatherEvent {
   type: 'clear' | 'rain' | 'storm' | 'wind';
   intensity: number;
   speed_modifier: number;
   location: LocationData;
   timestamp: Date;
+  details: WeatherDetails;
 }
 
 export interface FlightProgress {

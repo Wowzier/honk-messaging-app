@@ -19,8 +19,11 @@ interface StickerPeelProps {
   initialPosition?: 'center' | { x: number; y: number };
   peelDirection?: number;
   className?: string;
+  /** position mode for the root draggable element. Use 'absolute' for placed stickers so they stay inside parents. */
+  positionMode?: 'fixed' | 'absolute' | 'relative';
   onDragEnd?: (x: number, y: number) => void;
   onDragStart?: () => void;
+  usePortal?: boolean;
 }
 
 const StickerPeel = ({
@@ -38,12 +41,15 @@ const StickerPeel = ({
   className = '',
   onDragEnd,
   onDragStart,
+  positionMode = 'absolute',
+  usePortal = false,
 }: StickerPeelProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragTargetRef = useRef<HTMLDivElement>(null);
   const pointLightRef = useRef<SVGFEPointLightElement>(null);
   const pointLightFlippedRef = useRef<SVGFEPointLightElement>(null);
   const draggableInstanceRef = useRef<any>(null);
+  const portalDataRef = useRef<{ originalParent: Node | null, originalNextSibling: ChildNode | null } | null>(null);
   const [dynamicPeelDirection, setDynamicPeelDirection] = useState(peelDirection);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -86,6 +92,15 @@ const StickerPeel = ({
         onDragStart?.();
         // Ensure the dragged sticker is on top
         gsap.set(target, { zIndex: 9999 });
+
+        // If using portal, move target to document.body
+        if (usePortal) {
+          portalDataRef.current = {
+            originalParent: target.parentNode,
+            originalNextSibling: target.nextSibling,
+          };
+          document.body.appendChild(target);
+        }
       },
       onDrag() {
         const rot = gsap.utils.clamp(-24, 24, this.deltaX * 0.4);
@@ -101,6 +116,15 @@ const StickerPeel = ({
         
         const rect = target.getBoundingClientRect();
         onDragEnd?.(rect.left + rect.width / 2, rect.top + rect.height / 2);
+
+        if (usePortal && portalDataRef.current) {
+          // Reattach the element to its original parent
+          const { originalParent, originalNextSibling } = portalDataRef.current;
+          if (originalParent) {
+            originalParent.insertBefore(target, originalNextSibling);
+          }
+          portalDataRef.current = null;
+        }
       }
     })[0];
 
@@ -120,7 +144,7 @@ const StickerPeel = ({
         draggableInstanceRef.current.kill();
       }
     };
-  }, [onDragEnd, onDragStart, peelDirection]);
+  }, [onDragEnd, onDragStart, peelDirection, usePortal]);
 
   useEffect(() => {
     if (!isDragging) return;
@@ -230,7 +254,9 @@ const StickerPeel = ({
       ref={dragTargetRef} 
       style={{
         ...cssVars,
-        position: 'fixed',
+        // Allow parent to control stacking/positioning. Use positionMode prop to
+        // choose the most appropriate layout behavior (absolute for placed stickers)
+        position: positionMode,
         zIndex: 9999,
         pointerEvents: 'auto',
       }}>

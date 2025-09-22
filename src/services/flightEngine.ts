@@ -497,9 +497,8 @@ export class FlightEngine {
    */
   private async triggerMessageDelivery(messageId: string, flightProgress: FlightProgress): Promise<void> {
     try {
-      // Import messageDeliveryService dynamically to avoid circular dependencies
-      const { messageDeliveryService } = await import('./messageDelivery');
-      await messageDeliveryService.handleFlightCompletion(messageId, flightProgress);
+      const { messageDeliveryClientService } = await import('./messageDeliveryClient');
+      await messageDeliveryClientService.handleFlightCompletion(messageId, flightProgress);
     } catch (error) {
       console.error(`Error triggering message delivery for ${messageId}:`, error);
     }

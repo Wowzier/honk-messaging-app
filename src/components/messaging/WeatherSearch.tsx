@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { weatherService, WeatherCondition } from '@/services/weather';
 import { LocationData, WeatherEvent } from '@/types';
+import { CitySearch } from './CitySearch';
 
 interface WeatherSearchProps {
   className?: string;
@@ -146,6 +147,15 @@ export function WeatherSearch({ className = '' }: WeatherSearchProps) {
           </div>
         </div>
 
+        {/* City Search */}
+        <div className="space-y-3 border-t pt-4">
+          <h3 className="font-semibold text-lg">🏙️ Search by City Name</h3>
+          <CitySearch 
+            onCitySelect={(name, lat, lon) => searchWeather(lat, lon, name)}
+            disabled={loading}
+          />
+        </div>
+
         {/* Custom Coordinates Search */}
         <div className="space-y-3 border-t pt-4">
           <h3 className="font-semibold text-lg">📍 Custom Coordinates</h3>
@@ -206,24 +216,63 @@ export function WeatherSearch({ className = '' }: WeatherSearchProps) {
 
             {/* Main Weather Display */}
             <div className="grid md:grid-cols-2 gap-4">
-              {/* Weather Condition */}
+              {/* Current Weather */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-6 rounded-lg">
                 <div className="flex items-center gap-4 mb-4">
-                  <span className="text-6xl">{getWeatherEmoji(weather.type)}</span>
+                  <span className="text-6xl">{getWeatherEmoji(weather.type as WeatherCondition)}</span>
                   <div>
                     <h4 className="text-2xl font-bold capitalize">{weather.type}</h4>
-                    <p className="text-gray-600">{getWeatherDescription(weather.type)}</p>
+                    <p className="text-gray-600">{weatherService.getWeatherSummary(weather)}</p>
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Intensity:</span>
-                    <span className="font-semibold">{Math.round(weather.intensity * 100)}%</span>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  {/* Temperature */}
+                  <div className="bg-white/50 p-3 rounded-lg">
+                    <div className="text-gray-600 text-sm">Temperature</div>
+                    <div className="text-2xl font-bold">
+                      {weather.details?.temperature}°F
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Condition:</span>
-                    <span className="font-semibold">{weatherService.getWeatherSummary(weather)}</span>
+                  
+                  {/* Humidity */}
+                  <div className="bg-white/50 p-3 rounded-lg">
+                    <div className="text-gray-600 text-sm">Humidity</div>
+                    <div className="text-2xl font-bold">
+                      {weather.details?.humidity}%
+                    </div>
+                  </div>
+                  
+                  {/* Precipitation */}
+                  <div className="bg-white/50 p-3 rounded-lg">
+                    <div className="text-gray-600 text-sm">Precipitation</div>
+                    <div className="text-2xl font-bold">
+                      {weather.details?.precipitation} mm/h
+                    </div>
+                  </div>
+                  
+                  {/* Wind */}
+                  <div className="bg-white/50 p-3 rounded-lg">
+                    <div className="text-gray-600 text-sm">Wind Speed</div>
+                    <div className="text-2xl font-bold">
+                      {weather.details?.windSpeed} km/h
+                    </div>
+                  </div>
+
+                  {/* Cloud Cover */}
+                  <div className="bg-white/50 p-3 rounded-lg">
+                    <div className="text-gray-600 text-sm">Cloud Cover</div>
+                    <div className="text-2xl font-bold">
+                      {weather.details?.cloudCover}%
+                    </div>
+                  </div>
+
+                  {/* Pressure */}
+                  <div className="bg-white/50 p-3 rounded-lg">
+                    <div className="text-gray-600 text-sm">Pressure</div>
+                    <div className="text-2xl font-bold">
+                      {weather.details?.pressure} hPa
+                    </div>
                   </div>
                 </div>
               </div>
@@ -235,23 +284,56 @@ export function WeatherSearch({ className = '' }: WeatherSearchProps) {
                   <h4 className="text-2xl font-bold">Duck Flight Impact</h4>
                 </div>
                 
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Base Speed:</span>
-                    <span className="font-semibold">50 km/h</span>
+                <div className="space-y-4">
+                  <div className="bg-white/50 p-3 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Base Speed:</span>
+                      <span className="font-semibold">50 km/h</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Weather Effect:</span>
-                    <span className={getSpeedColor(weather.speed_modifier)}>
-                      {speedEffectText}
-                    </span>
+
+                  <div className="bg-white/50 p-3 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Weather Effect:</span>
+                      <span className={getSpeedColor(weather.speed_modifier)}>
+                        {speedEffectText}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-sm text-gray-500">
+                      {weather.details?.windSpeed > 25 ? 
+                        `Strong winds ${weather.speed_modifier > 1 ? 'helping' : 'hindering'} flight speed` :
+                        weather.type === 'rain' ? 'Rain reducing flight speed' :
+                        weather.type === 'storm' ? 'Storm severely impacting flight' :
+                        'Ideal flying conditions'
+                      }
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center border-t pt-2">
-                    <span className="text-gray-600">Actual Speed:</span>
-                    <span className={`text-xl font-bold ${getSpeedColor(weather.speed_modifier)}`}>
-                      {Math.round(flightSpeed)} km/h
-                    </span>
+
+                  <div className="bg-white/50 p-3 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Actual Speed:</span>
+                      <span className={`text-xl font-bold ${getSpeedColor(weather.speed_modifier)}`}>
+                        {Math.round(flightSpeed)} km/h
+                      </span>
+                    </div>
                   </div>
+
+                  {weather.details?.windSpeed > 0 && (
+                    <div className="bg-white/50 p-3 rounded-lg">
+                      <div className="text-gray-600 mb-1">Wind Direction</div>
+                      <div className="flex items-center gap-2">
+                        <span style={{ 
+                          transform: `rotate(${weather.details.windDirection}deg)`,
+                          display: 'inline-block'
+                        }}>
+                          ➜
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          {weather.details.windDirection}°
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

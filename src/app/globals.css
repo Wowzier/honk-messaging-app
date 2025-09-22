@@ -45,6 +45,9 @@
 
 :root {
   --radius: 0.625rem;
+  /* Duck SVG sizing variables (default values) */
+  --duck-width: 100px;
+  --duck-height: 175px;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -115,8 +118,70 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
   }
+
+  html {
+    height: 100%;
+    overflow: hidden;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
+    background-image: url("/postermail.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    color: var(--foreground);
+    position: fixed;
+    overflow-y: scroll; /* Enable vertical scrolling on body */
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  }
+
+  /* WebKit browsers (Chrome, Safari, etc.) */
+  body::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Remove the pseudo-element since we're using fixed positioning on body */
+  /* body::before is no longer needed */
+
+  #__next, main {
+    min-height: 100%;
+    width: 100%;
+    position: relative;
+    overflow: visible;
+  }
+
+  /* Mailbox container (replaces previous red-box div) */
+  .red-box {
+    /* keep the original default size */
+    width: var(--mailbox-width, 100px);
+    height: var(--mailbox-height, 175px);
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    z-index: 10;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  /* Second box container (duck) - size controlled via CSS variables */
+  .second-box {
+    width: var(--duck-width, 100px);
+    height: var(--duck-height, 175px);
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    z-index: 10;
+    user-select: none;
+    -webkit-user-drag: none;
   }
 }

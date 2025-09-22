@@ -128,7 +128,6 @@ export default function Home() {
                   playsInline
                   preload="auto"
                   style={{
-                    mixBlendMode: 'screen',
                     transform: 'scale(1.5)', // Adjust scale as needed
                   }}
                 >

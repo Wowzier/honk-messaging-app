@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import LogoLoop from '@/components/ui/LogoLoop';
+import StickerGroup from '@/components/StickerGroup';
 import { calculatePostcardLineCount, POSTCARD_MAX_LINES } from '@/utils/postcard';
 
 export default function PostcardPage() {
@@ -50,14 +50,6 @@ export default function PostcardPage() {
   }>>([]);
   const [postcardRef, setPostcardRef] = useState<HTMLDivElement | null>(null);
 
-  const stickerLogos = [
-    { src: "/sticker.png", alt: "Sticker 1" },
-    { src: "/sticker.png", alt: "Sticker 2" },
-    { src: "/sticker.png", alt: "Sticker 3" },
-    { src: "/sticker.png", alt: "Sticker 4" },
-    { src: "/sticker.png", alt: "Sticker 5" },
-  ];
-
   // Sticker data with random rotations for scattered effect
   const stickerData = [
     { rotation: -15, hueRotate: 0 },
@@ -67,14 +59,10 @@ export default function PostcardPage() {
     { rotation: -22, hueRotate: 288 },
   ];
 
+  const MAX_PLACED_STICKERS = 6; // Maximum stickers allowed on a postcard at once
+
   const handleStickerDrop = (x: number, y: number, stickerIndex: number) => {
     if (!postcardRef) return;
-
-    // Check if we already have 5 stickers
-    if (placedStickers.length >= 5) {
-      console.log('Maximum stickers reached');
-      return;
-    }
 
     const postcardRect = postcardRef.getBoundingClientRect();
 
@@ -103,7 +91,13 @@ export default function PostcardPage() {
       };
 
       console.log('Adding sticker:', newSticker);
-      setPlacedStickers(prev => [...prev, newSticker]);
+      setPlacedStickers(prev => {
+        if (prev.length < MAX_PLACED_STICKERS) return [...prev, newSticker];
+        // If at max capacity, remove the oldest sticker (FIFO) and append the new one
+        const next = prev.slice(1);
+        next.push(newSticker);
+        return next;
+      });
     } else {
       console.log('Drop outside postcard');
     }
@@ -237,21 +231,55 @@ export default function PostcardPage() {
                   flex: 1, 
                   position: 'relative', 
                   background: 'linear-gradient(to top, rgba(255, 221, 193, 0.5), transparent)',
+                  padding: '20px'
                 }}>
-                <div style={{ overflow: 'hidden' }}>
-                  <LogoLoop
-                    logos={stickerLogos}
-                    speed={80}
-                    direction="up"
-                    logoWidth={192}
-                    gap={120}
-                    pauseOnHover
-                    scaleOnHover
-                    fadeOut
-                    fadeOutColor="#fbf9f4"
-                    ariaLabel="Stickers"
-                  />
-                </div>
+                <StickerGroup
+                  stickers={[
+                    { image: "/sticker.png" },
+                    { image: "/sticker.png" },
+                    { image: "/sticker.png" },
+                    { image: "/sticker.png" },
+                    { image: "/sticker.png" },
+                    { image: "/sticker.png" }
+                  ]}
+                  onDragEnd={(x, y, index) => {
+                    if (postcardRef) {
+                      const postcardRect = postcardRef.getBoundingClientRect();
+                      if (
+                        x >= postcardRect.left &&
+                        x <= postcardRect.right &&
+                        y >= postcardRect.top &&
+                        y <= postcardRect.bottom
+                      ) {
+                        // Calculate relative position within postcard
+                        const relativeX = x - postcardRect.left;
+                        const relativeY = y - postcardRect.top;
+                        
+                        // Add the sticker to the placed stickers with a random rotation
+                        const newSticker = {
+                          id: `sticker-${Date.now()}-${index}`,
+                          x: relativeX,
+                          y: relativeY,
+                          rotation: Math.random() * 30 - 15,
+                          hueRotate: stickerData[index % stickerData.length].hueRotate,
+                          originalIndex: index,
+                        };
+                        
+                        setPlacedStickers(prev => {
+                          if (prev.length < MAX_PLACED_STICKERS) return [...prev, newSticker];
+                          const next = prev.slice(1);
+                          next.push(newSticker);
+                          return next;
+                        });
+                        
+                        // Return true to indicate successful placement
+                        return true;
+                      }
+                    }
+                    // Return false to indicate sticker should teleport back
+                    return false;
+                  }}
+                />
               </div>
             </div>
 
@@ -385,15 +413,15 @@ export default function PostcardPage() {
                   key={sticker.id}
                   style={{
                     position: 'absolute',
-                    left: sticker.x - 64,
-                    top: sticker.y - 64,
+                    left: sticker.x - 32,
+                    top: sticker.y - 32,
                     filter: `hue-rotate(${sticker.hueRotate}deg)`,
                     zIndex: 10,
                   }}
                 >
                   <StickerPeel
                     imageSrc="/sticker.png"
-                    width={128}
+                    width={64}
                     rotate={sticker.rotation}
                     peelBackHoverPct={15}
                     peelBackActivePct={30}
@@ -401,6 +429,7 @@ export default function PostcardPage() {
                     lightingIntensity={0.05}
                     initialPosition="center"
                     className={`placed-sticker-${sticker.id}`}
+                    positionMode="absolute"
                     onDragEnd={(x, y) => handlePlacedStickerMove(sticker.id, x, y)}
                   />
                 </div>

@@ -61,7 +61,7 @@ describe('WeatherService', () => {
         current: {
           time: '2022-01-01T15:00',
           interval: 900,
-          temperature_2m: 20.0,
+          temperature_2m: 68.0,
           relative_humidity_2m: 60,
           precipitation: 0.0,
           weather_code: 0, // Clear sky
@@ -138,7 +138,7 @@ describe('WeatherService', () => {
         current: {
           time: '2022-01-01T15:00',
           interval: 900,
-          temperature_2m: 15.0,
+          temperature_2m: 59.0,
           relative_humidity_2m: 80,
           precipitation: 2.5,
           weather_code: 61, // Rain
@@ -192,7 +192,7 @@ describe('WeatherService', () => {
         current: {
           time: '2022-01-01T15:00',
           interval: 900,
-          temperature_2m: 18.0,
+          temperature_2m: 64.4,
           relative_humidity_2m: 90,
           precipitation: 5.0,
           weather_code: 95, // Thunderstorm

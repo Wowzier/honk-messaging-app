@@ -55,22 +55,32 @@ export function WebSocketDemo() {
     };
 
     try {
-      const flightRecord = await flightEngine.initializeFlight(
-        demoMessageId,
-        startLocation,
-        endLocation
-      );
+      // Create demo flight on server
+      const response = await fetch('/api/flights/demo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messageId: demoMessageId,
+          startLocation,
+          endLocation,
+        }),
+      });
 
-      if (flightRecord) {
+      if (response.ok) {
+        const flightRecord = await response.json();
         setMessageId(demoMessageId);
         
-        // Create initial notification
+        // Create initial notification using client service
         notificationService.createNotification(
           'demo-user',
           'flight.update',
           'Demo Flight Started! 🦆',
           'Your demo duck has started its journey from New York to Los Angeles!'
         );
+      } else {
+        throw new Error('Failed to create demo flight');
       }
     } catch (error) {
       console.error('Failed to start demo flight:', error);
