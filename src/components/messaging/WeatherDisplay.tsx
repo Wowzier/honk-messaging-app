@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { weatherService, WeatherCondition } from '@/services/weather';
 import { LocationData, WeatherEvent } from '@/types';
-import { GeolocationService, GeolocationError } from '@/services/geolocation';
+import { locationService } from '@/services/locationService';
 
 interface WeatherDisplayProps {
     location?: LocationData;
@@ -77,13 +77,13 @@ export function WeatherDisplay({ location, className = '' }: WeatherDisplayProps
         const getUserLocation = async () => {
             try {
                 setLoading(true);
-                const location = await GeolocationService.getCurrentLocation();
+                const location = await locationService.getCurrentLocationWithFallback();
                 setUserLocation(location);
                 setLocationError(null);
                 await fetchWeather(location);
             } catch (error) {
-                setLocationError((error as GeolocationError).message);
-                // Fallback to New York if location access is denied
+                setLocationError((error as any).message || 'Location unavailable');
+                // Fallback to New York if everything fails
                 const defaultLocation = DEMO_LOCATIONS[selectedCity as keyof typeof DEMO_LOCATIONS];
                 await fetchWeather(defaultLocation);
             } finally {

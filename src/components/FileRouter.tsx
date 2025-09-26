@@ -12,7 +12,6 @@ interface Page {
 
 const pages: Page[] = [
   { name: 'Home', path: '/' },
-  { name: 'Home', path: '/home' },
   { name: 'Compose', path: '/compose' },
   { name: 'Conversations', path: '/conversations' },
   { name: 'Demo', path: '/demo' },
@@ -24,6 +23,7 @@ const pages: Page[] = [
   { name: 'Ranking', path: '/ranking' },
   { name: 'Register', path: '/register' },
   { name: 'Reply', path: '/reply' },
+   { name: 'Platform', path: '/platform' },
   { name: 'Weather Demo', path: '/weather-demo' },
   { name: 'Weather Search', path: '/weather-search' },
   { name: 'Websocket Demo', path: '/websocket-demo' },

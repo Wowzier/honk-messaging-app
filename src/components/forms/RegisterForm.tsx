@@ -78,111 +78,120 @@ export function RegisterForm({ onSuccess, redirectTo = '/' }: RegisterFormProps)
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>Join Honk!</CardTitle>
-        <CardDescription>
+    <div className="w-full">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-white mb-2">Join Honk!</h2>
+        <p className="text-white/70">
           Create your account to start sending messages with duck couriers
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={credentials.email}
-              onChange={handleChange('email')}
-              placeholder="your@email.com"
-              required
-              disabled={loading}
-            />
+        </p>
+      </div>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && (
+          <div className="bg-red-500/20 backdrop-blur-md border border-red-400/30 rounded-2xl p-4">
+            <p className="text-red-200 text-sm">{error}</p>
           </div>
+        )}
 
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              value={credentials.username}
-              onChange={handleChange('username')}
-              placeholder="your_username"
-              required
-              disabled={loading}
-              minLength={3}
-              maxLength={30}
-              pattern="[a-zA-Z0-9_-]+"
-              title="Username can only contain letters, numbers, underscores, and hyphens"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={credentials.password}
-              onChange={handleChange('password')}
-              placeholder="Your password"
-              required
-              disabled={loading}
-              minLength={8}
-            />
-            <p className="text-sm text-muted-foreground">
-              Must be at least 8 characters with uppercase, lowercase, and number
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm your password"
-              required
-              disabled={loading}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="locationPreference">Location Sharing Preference</Label>
-            <Select
-              value={credentials.location_sharing_preference}
-              onValueChange={handleLocationPreferenceChange}
-              disabled={loading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose location sharing preference" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="state">Share State/Province</SelectItem>
-                <SelectItem value="country">Share Country Only</SelectItem>
-                <SelectItem value="anonymous">Anonymous Location</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              This controls how much location information others can see when you send messages
-            </p>
-          </div>
-
-          <Button 
-            type="submit" 
-            className="w-full" 
+        <div className="space-y-3">
+          <label htmlFor="email" className="block text-sm font-medium text-white/90">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={credentials.email}
+            onChange={handleChange('email')}
+            placeholder="your@email.com"
+            required
             disabled={loading}
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:border-white/40 focus:bg-white/20 transition-all duration-300"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <label htmlFor="username" className="block text-sm font-medium text-white/90">
+            Username
+          </label>
+          <input
+            id="username"
+            type="text"
+            value={credentials.username}
+            onChange={handleChange('username')}
+            placeholder="your_username"
+            required
+            disabled={loading}
+            minLength={3}
+            maxLength={30}
+            pattern="[a-zA-Z0-9_-]+"
+            title="Username can only contain letters, numbers, underscores, and hyphens"
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:border-white/40 focus:bg-white/20 transition-all duration-300"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <label htmlFor="password" className="block text-sm font-medium text-white/90">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={credentials.password}
+            onChange={handleChange('password')}
+            placeholder="Your password"
+            required
+            disabled={loading}
+            minLength={8}
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:border-white/40 focus:bg-white/20 transition-all duration-300"
+          />
+          <p className="text-sm text-white/60">
+            Must be at least 8 characters with uppercase, lowercase, and number
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-white/90">
+            Confirm Password
+          </label>
+          <input
+            id="confirmPassword"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm your password"
+            required
+            disabled={loading}
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:border-white/40 focus:bg-white/20 transition-all duration-300"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-white/90">
+            Location Sharing Preference
+          </label>
+          <select
+            value={credentials.location_sharing_preference}
+            onChange={(e) => handleLocationPreferenceChange(e.target.value as 'state' | 'country' | 'anonymous')}
+            disabled={loading}
+            className="w-full px-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white focus:outline-none focus:border-white/40 focus:bg-white/20 transition-all duration-300"
           >
-            {loading ? 'Creating account...' : 'Create Account'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <option value="state" className="bg-gray-800 text-white">Share State/Province</option>
+            <option value="country" className="bg-gray-800 text-white">Share Country Only</option>
+            <option value="anonymous" className="bg-gray-800 text-white">Anonymous Location</option>
+          </select>
+          <p className="text-sm text-white/60">
+            This controls how much location information others can see when you send messages
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-4 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl text-white font-semibold text-lg shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        >
+          {loading ? 'Creating account...' : 'Create Account'}
+        </button>
+      </form>
+    </div>
   );
 }

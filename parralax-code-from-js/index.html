@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Parallax Canvas Demo</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Parallax Canvas Demo</h1>
+      <p>Uses the images from the <code>layers/</code> folder.</p>
+    </header>
+
+    <main>
+      <div class="controls">
+        <label for="speedRange">Global Speed: <span id="speedValue">2</span></label>
+        <input id="speedRange" type="range" min="0" max="10" step="0.1" value="2" />
+      </div>
+
+      <canvas id="myCanvas"></canvas>
+    </main>
+
+    <!-- Preload images so they are available to script via IDs -->
+    <img id="layer1" src="layers/Grass.png" alt="Grass" style="display:none;" />
+    <img id="layer2" src="layers/Ground.png" alt="Ground" style="display:none;" />
+    <img id="layer3" src="layers/HugeTree.png" alt="HugeTree" style="display:none;" />
+    <img id="layer4" src="layers/TheTreeBehind1.png" alt="TreeBehind1" style="display:none;" />
+    <img id="layer5" src="layers/TheTreeBehind2.png" alt="TreeBehind2" style="display:none;" />
+
+    <script src="script.js"></script>
+  </body>
+</html>
