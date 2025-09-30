@@ -55,7 +55,8 @@ export function InboxCarousel() {
     setError(null);
 
     try {
-      const token = Cookies.get('honk_auth_token');
+      const tokenFromCookie = Cookies.get('honk_auth_token');
+      const token = tokenFromCookie || (typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') ?? undefined : undefined);
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -130,15 +131,12 @@ export function InboxCarousel() {
   if (!user) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-journal-paper to-journal-paper-alt">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🔒</div>
-          <h2 className="text-2xl font-bold text-gray-700 mb-4">Please log in</h2>
-          <button
-            onClick={() => router.push('/login')}
-            className="px-6 py-3 bg-journal-accent text-white rounded-full font-semibold hover:bg-journal-accent/90 transition-all"
-          >
-            Go to Login
-          </button>
+        <div className="text-center max-w-sm space-y-4">
+          <div className="text-6xl">🪶</div>
+          <h2 className="text-2xl font-bold text-gray-700">Getting your courier ready...</h2>
+          <p className="text-gray-600 text-sm">
+            We&apos;re assigning a custom ID to your duck courier. This usually only takes a moment—your inbox will appear automatically once it&apos;s ready.
+          </p>
         </div>
       </div>
     );

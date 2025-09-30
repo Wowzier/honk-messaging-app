@@ -1,6 +1,6 @@
 .postmail-page {
-  min-height: 100vh;
-  padding: 3rem 1.5rem 4rem;
+  min-height: 100svh;
+  padding: clamp(2rem, 6vw, 3rem) clamp(1rem, 4vw, 1.5rem) 4rem;
   background: #f8fafc;
 }
 
@@ -9,7 +9,7 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: clamp(2rem, 5vw, 2.5rem);
 }
 
 .postmail-header {
@@ -59,6 +59,25 @@
   position: relative;
   padding-top: 0.75rem;
   min-height: 160px;
+  overflow-x: auto;
+  padding-bottom: 0.75rem;
+  margin: 0 -0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.postmail-tray-group::-webkit-scrollbar {
+  height: 8px;
+}
+
+.postmail-tray-group::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+}
+
+.postmail-tray-group::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .postmail-workspace {
@@ -117,7 +136,7 @@
   border-radius: 26px;
   border: 1px solid rgba(203, 213, 225, 0.6);
   box-shadow: 0 24px 55px rgba(148, 163, 184, 0.2);
-  padding: 1.8rem;
+  padding: clamp(1.25rem, 4vw, 1.8rem);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -132,6 +151,7 @@
   border: 2px dashed rgba(148, 163, 184, 0.35);
   background: rgba(255, 255, 255, 0.95);
   overflow: hidden;
+  max-width: 100%;
 }
 
 .postmail-dropzone::before {
@@ -227,27 +247,61 @@
   filter: drop-shadow(0 12px 18px rgba(217, 119, 6, 0.22));
 }
 
-@media (max-width: 900px) {
-  .postmail-page {
-    padding: 2.5rem 1.25rem 3.5rem;
+  @media (max-width: 900px) {
+    .postmail-page {
+      padding: 2.5rem 1.25rem 3.5rem;
+    }
+
+    .postmail-canvas {
+      min-height: 360px;
+    }
   }
 
-  .postmail-canvas {
-    min-height: 380px;
-  }
-}
+  @media (max-width: 768px) {
+    .postmail-workspace {
+      gap: 1.5rem;
+    }
 
-@media (max-width: 640px) {
-  .postmail-workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .postmail-note,
-  .postmail-canvas {
-    padding: 1.25rem;
+    .postmail-note textarea {
+      min-height: 160px;
+    }
   }
 
-  .postmail-dropzone {
-    width: 100%;
+  @media (max-width: 640px) {
+    .postmail-workspace {
+      grid-template-columns: 1fr;
+    }
+
+    .postmail-note,
+    .postmail-canvas {
+      padding: 1.25rem;
+    }
+
+    .postmail-dropzone {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+    }
   }
-}
+
+  @media (max-width: 480px) {
+    .postmail-header h1 {
+      font-size: clamp(2rem, 10vw, 2.5rem);
+    }
+
+    .postmail-tray-text h2 {
+      font-size: 1.35rem;
+    }
+
+    .postmail-note {
+      gap: 0.75rem;
+    }
+
+    .postmail-canvas {
+      min-height: 300px;
+    }
+
+    .postmail-dropzone-guide {
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+    }
+  }

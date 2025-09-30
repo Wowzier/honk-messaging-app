@@ -166,16 +166,14 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <Link href="/login">
+                  <Link href="/postcard">
                     <Button variant="ghost" size="lg" className="text-white/80 hover:text-white hover:bg-white/10 backdrop-blur-md rounded-full px-6">
-                      Log in
+                      Launch postcard studio
                     </Button>
                   </Link>
-                  <Link href="/register">
-                    <Button size="lg" className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-md border border-white/30 rounded-full px-8 shadow-lg">
-                      Create account
-                    </Button>
-                  </Link>
+                  <span className="text-sm text-white/70 bg-white/10 backdrop-blur-md rounded-full px-4 py-2 border border-white/20">
+                    No login needed—your courier ID is created automatically.
+                  </span>
                 </>
               )}
             </div>
@@ -343,9 +341,9 @@ export default function Home() {
                       Draft six-line postcards, drop in stickers, and follow duck couriers as they glide through weather systems across the globe. Everything feels structured, minimal, and delightfully analog.
                     </p>
                     <div className="flex flex-wrap items-center gap-6 pt-4">
-                      <Link href="/register">
+                      <Link href="/postcard">
                         <Button size="lg" className="rounded-full px-8 py-4 text-lg bg-white/20 text-white hover:bg-white/30 backdrop-blur-md border border-white/30 shadow-lg">
-                          Create your account
+                          Start crafting now
                         </Button>
                       </Link>
                       <Link href="/demo">
@@ -354,11 +352,8 @@ export default function Home() {
                         </Button>
                       </Link>
                     </div>
-                    <p className="text-base text-white/60 pt-2">
-                      Already using Honk?{' '}
-                      <Link href="/login" className="font-medium text-yellow-300 hover:text-yellow-200 transition-colors">
-                        Sign in here
-                      </Link>
+                    <p className="text-base text-white/70 pt-2">
+                      Every visitor gets a personal courier ID automatically—jump in and send your first honk in seconds.
                     </p>
                   </div>
                 </section>

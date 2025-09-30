@@ -19,10 +19,39 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_COOKIE_NAME = 'honk_auth_token';
+const TOKEN_STORAGE_KEY = 'auth_token';
 const COOKIE_OPTIONS = {
   expires: 7, // 7 days
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'strict' as const
+};
+
+const persistToken = (token: string | null) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (token) {
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  } else {
+    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  }
+};
+
+const getStoredToken = () => {
+  const cookieToken = Cookies.get(TOKEN_COOKIE_NAME);
+  if (cookieToken) {
+    return cookieToken;
+  }
+
+  if (typeof window !== 'undefined') {
+    const storageToken = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (storageToken) {
+      return storageToken;
+    }
+  }
+
+  return undefined;
 };
 
 interface AuthProviderProps {
@@ -65,13 +94,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const data = await response.json();
           if (data.success && data.user) {
             setUser(data.user);
+            persistToken(token);
             setLoading(false);
             return;
           }
         }
-        
+
         // Token is invalid, remove it
         Cookies.remove(TOKEN_COOKIE_NAME);
+        persistToken(null);
       }
 
       // No valid token, try seamless device authentication
@@ -90,6 +121,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           if (data.success && data.user && data.token) {
             setUser(data.user);
             Cookies.set(TOKEN_COOKIE_NAME, data.token, COOKIE_OPTIONS);
+            persistToken(data.token);
           }
         }
       } catch (deviceAuthError) {
@@ -99,6 +131,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('Auth initialization error:', error);
       Cookies.remove(TOKEN_COOKIE_NAME);
+      persistToken(null);
     } finally {
       setLoading(false);
     }
@@ -119,6 +152,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (data.success && data.user && data.token) {
         setUser(data.user);
         Cookies.set(TOKEN_COOKIE_NAME, data.token, COOKIE_OPTIONS);
+        persistToken(data.token);
       }
 
       return data;
@@ -146,6 +180,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (data.success && data.user && data.token) {
         setUser(data.user);
         Cookies.set(TOKEN_COOKIE_NAME, data.token, COOKIE_OPTIONS);
+        persistToken(data.token);
       }
 
       return data;
@@ -161,6 +196,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = () => {
     setUser(null);
     Cookies.remove(TOKEN_COOKIE_NAME);
+    persistToken(null);
   };
 
   const updateProfile = async (profile: Partial<UserProfile>): Promise<boolean> => {
@@ -196,7 +232,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshUser = async () => {
     try {
-      const token = Cookies.get(TOKEN_COOKIE_NAME);
+      const token = getStoredToken();
       if (!token) {
         return;
       }
@@ -222,7 +258,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const generateLinkCode = async (): Promise<{ code: string; expiresIn: number } | null> => {
     try {
-      const token = Cookies.get(TOKEN_COOKIE_NAME);
+      const token = getStoredToken();
       if (!token) {
         return null;
       }
@@ -264,6 +300,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (data.success && data.user && data.token) {
           setUser(data.user);
           Cookies.set(TOKEN_COOKIE_NAME, data.token, COOKIE_OPTIONS);
+          persistToken(data.token);
           return true;
         }
       }

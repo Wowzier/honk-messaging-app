@@ -21,18 +21,7 @@ export default function ComposePage() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Please log in to compose a message</h1>
-          <Link href="/login">
-            <Button>Login</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const displayName = user?.username ?? 'Courier';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -50,7 +39,7 @@ export default function ComposePage() {
           </div>
           
           <div className="flex items-center space-x-4">
-            <span className="text-gray-700">Welcome, {user.username}!</span>
+            <span className="text-gray-700">Welcome, {displayName}!</span>
             <Link href="/profile">
               <Button variant="outline">Profile</Button>
             </Link>

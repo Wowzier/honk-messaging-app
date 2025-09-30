@@ -49,18 +49,7 @@ export default function ConversationsPage() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Please log in to view conversations</h1>
-          <Link href="/login">
-            <Button>Login</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const displayName = user?.username ?? 'Courier';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -78,7 +67,7 @@ export default function ConversationsPage() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700">Welcome, {user.username}!</span>
+              <span className="text-gray-700">Welcome, {displayName}!</span>
               <Link href="/inbox">
                 <Button variant="outline">Inbox</Button>
               </Link>
@@ -91,6 +80,11 @@ export default function ConversationsPage() {
 
         {/* Main Content */}
         <main>
+          {!user && (
+            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50/70 p-4 text-sm text-blue-900">
+              We&apos;re still assigning your courier ID. Feel free to browse—messages will sync automatically once your token is ready.
+            </div>
+          )}
           {selectedConversation ? (
             <ConversationDetailView
               conversation={selectedConversation}

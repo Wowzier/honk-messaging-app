@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,6 +9,7 @@ import { HonkMessage } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import Cookies from 'js-cookie';
 
 function ReplyPageFallback() {
   return (
@@ -34,14 +35,46 @@ function ReplyPageContent() {
   const replyToId = searchParams.get('reply_to');
   const recipientId = searchParams.get('recipient_id');
 
+  const resolveAuthToken = useCallback(() => {
+    const tokenFromCookie = typeof document !== 'undefined' ? Cookies.get('honk_auth_token') : undefined;
+    if (tokenFromCookie && tokenFromCookie.trim()) {
+      return tokenFromCookie;
+    }
+
+    if (typeof window !== 'undefined') {
+      const tokenFromStorage = window.localStorage.getItem('auth_token');
+      if (tokenFromStorage && tokenFromStorage.trim()) {
+        return tokenFromStorage;
+      }
+    }
+
+    return null;
+  }, []);
+
   useEffect(() => {
-    if (!replyToId || !user) return;
+    if (!replyToId) {
+      setLoading(false);
+      setError('The reply link is missing the message to respond to.');
+      return;
+    }
+
+    if (authLoading) {
+      return;
+    }
+
+    const token = resolveAuthToken();
+
+    if (!token) {
+      setLoading(false);
+      setError('We couldn\'t confirm your courier ID. Refresh the page to try again.');
+      return;
+    }
 
     const fetchOriginalMessage = async () => {
       try {
         const response = await fetch(`/api/messages/${replyToId}`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -59,7 +92,7 @@ function ReplyPageContent() {
     };
 
     fetchOriginalMessage();
-  }, [replyToId, user]);
+  }, [replyToId, authLoading, resolveAuthToken]);
 
   const handleSendReply = async (replyData: {
     title: string;
@@ -70,11 +103,16 @@ function ReplyPageContent() {
   }) => {
     setSending(true);
     try {
+      const token = resolveAuthToken();
+      if (!token) {
+        throw new Error('Courier ID missing. Please refresh and try again.');
+      }
+
       const response = await fetch('/api/messages/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(replyData),
       });
@@ -104,21 +142,6 @@ function ReplyPageContent() {
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Please log in to reply
-          </h1>
-          <Link href="/login">
-            <Button>Login</Button>
-          </Link>
         </div>
       </div>
     );
@@ -197,6 +220,11 @@ function ReplyPageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
+        {!user && (
+          <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50/70 p-4 text-sm text-blue-900">
+            We&apos;re still assigning your courier ID. Replies will send automatically once your token is ready.
+          </div>
+        )}
         <ReplyCompose
           originalMessage={originalMessage}
           onSend={handleSendReply}
