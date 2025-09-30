@@ -8,6 +8,7 @@ import ParallaxCanvas from "@/components/ParallaxCanvas"
 import { StickerPalette } from "@/components/StickerPalette"
 import { DraggableResizableSticker } from "@/components/DraggableResizableSticker"
 import { ColorWheelPicker } from "@/components/ColorWheelPicker"
+import { useAuth } from '@/hooks/useAuth'
 
 interface DrawingPoint {
   x: number
@@ -50,6 +51,7 @@ const createEmojiImage = (emoji: string): string => {
 
 export default function AnimalCrossingPostcard() {
   const router = useRouter()
+  const { user } = useAuth()
   const [selectedTool, setSelectedTool] = useState<string>("keyboard")
   const [message, setMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -75,6 +77,7 @@ export default function AnimalCrossingPostcard() {
     initialY?: number
   } | null>(null)
   const postcardRef = useRef<HTMLDivElement>(null)
+  const courierId = useMemo(() => user?.username ?? 'Courier', [user])
 
   // Improved drawing functionality with smoothing
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -327,6 +330,9 @@ export default function AnimalCrossingPostcard() {
 
       {/* Main content */}
       <div className="relative h-full w-full flex flex-col items-center justify-center p-4 gap-4 pointer-events-auto" style={{ zIndex: 1 }}>
+        <div className="bg-white/80 backdrop-blur-sm px-5 py-2 rounded-full border-2 border-journal-accent shadow-lg text-journal-accent font-semibold">
+          Courier ID: <span className="text-journal-marker-black">{courierId}</span>
+        </div>
         {/* Top toolbar - cute and compact */}
         <div className="bg-journal-paper/95 backdrop-blur-sm px-6 py-3 rounded-full border-4 border-white shadow-lg flex items-center gap-3">
           {/* Undo button */}
