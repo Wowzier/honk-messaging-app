@@ -358,8 +358,8 @@ export function MessagingFlow({ currentUser, className = '' }: MessagingFlowProp
           {!currentUser && (
             <Alert>
               <AlertDescription>
-                🚧 Demo Mode: This is a demonstration of the Honk! messaging system. 
-                In the full app, you would need to register and log in to send real messages.
+                🚧 Demo Mode: This is a demonstration of the Honk! messaging system.
+                In the live experience, every visitor receives a courier ID automatically so they can send real messages right away.
               </AlertDescription>
             </Alert>
           )}

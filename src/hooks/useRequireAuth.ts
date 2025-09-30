@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from './useAuth';
 
 /**
- * Hook that redirects to home if user is not authenticated
+ * Hook that redirects to the provided path if the user is not authenticated
  */
-export function useRequireAuth(redirectTo: string = '/') {
+export function useRequireAuth(redirectTo: string = '/postcard') {
   const { user, loading } = useAuth();
   const router = useRouter();
 

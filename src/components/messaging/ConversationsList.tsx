@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, RefreshCw, MessageSquare, User, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useAuth } from '@/hooks/useAuth';
+import Cookies from 'js-cookie';
 
 interface ConversationWithDetails extends Conversation {
   other_participant_id: string;
@@ -33,7 +33,6 @@ interface ConversationsListProps {
 }
 
 export function ConversationsList({ onConversationSelect }: ConversationsListProps) {
-  const { user } = useAuth();
   const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -61,9 +60,16 @@ export function ConversationsList({ onConversationSelect }: ConversationsListPro
         limit: '20'
       });
 
+      const tokenFromCookie = typeof document !== 'undefined' ? Cookies.get('honk_auth_token') : undefined;
+      const token = tokenFromCookie || (typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') ?? undefined : undefined);
+
+      if (!token) {
+        throw new Error('No courier token available.');
+      }
+
       const response = await fetch(`/api/conversations?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 

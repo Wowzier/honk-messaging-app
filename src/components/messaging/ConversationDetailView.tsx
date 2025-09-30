@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Loader2, ArrowLeft, Reply, User, MapPin, Clock, Award } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+import Cookies from 'js-cookie';
 
 interface ConversationWithDetails extends Conversation {
   other_participant_id: string;
@@ -63,9 +64,16 @@ export function ConversationDetailView({
         limit: '50'
       });
 
+      const tokenFromCookie = typeof document !== 'undefined' ? Cookies.get('honk_auth_token') : undefined;
+      const token = tokenFromCookie || (typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') ?? undefined : undefined);
+
+      if (!token) {
+        throw new Error('No courier token available.');
+      }
+
       const response = await fetch(`/api/conversations/${conversation.id}?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 

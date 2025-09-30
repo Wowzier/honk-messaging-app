@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
   redirectTo?: string;
 }
 
-export function ProtectedRoute({ children, redirectTo = '/login' }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, redirectTo = '/postcard' }: ProtectedRouteProps) {
   const { user, loading } = useRequireAuth(redirectTo);
 
   if (loading) {
@@ -23,7 +23,7 @@ export function ProtectedRoute({ children, redirectTo = '/login' }: ProtectedRou
   }
 
   if (!user) {
-    return null; // useRequireAuth will redirect to login
+    return null; // useRequireAuth will redirect to the provided path
   }
 
   return <>{children}</>;
