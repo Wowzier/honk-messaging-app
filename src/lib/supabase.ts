@@ -1,16 +1,25 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client with environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// Prefer public env vars so the browser client keeps working, but fall back to
+// the server-only names so deployments that only define those (like Vercel
+// secrets) still succeed.
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+const supabaseAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
+  throw new Error(
+    'Missing Supabase URL environment variable (NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL)'
+  );
 }
 
 if (!supabaseAnonKey) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable');
+  throw new Error(
+    'Missing Supabase anon key environment variable (NEXT_PUBLIC_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY)'
+  );
 }
 
 /**
