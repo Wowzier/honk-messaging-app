@@ -81,6 +81,21 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* Custom SL Minoel font */
+@font-face {
+  font-family: 'SL Minoel';
+  src: url('/fonts/SL Minoel.otf') format('opentype'),
+       url('/fonts/SL Minoel.otf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Set SL Minoel as the default font for the app */
+:root {
+  --font-sans: 'SL Minoel', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -121,9 +136,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-  }
-
-  html {
+  }  html {
     height: 100%;
     overflow: hidden;
   }
@@ -134,6 +147,7 @@
     margin: 0;
     background-color: var(--background);
     color: var(--foreground);
+    font-family: var(--font-sans);
     position: fixed;
     overflow-y: scroll; /* Enable vertical scrolling on body */
     overflow-x: hidden; /* Prevent horizontal scrolling */
@@ -179,5 +193,19 @@
     z-index: 10;
     user-select: none;
     -webkit-user-drag: none;
+  }
+
+  /* Leaflet image path overrides: ensure images load from /images/ in public/ */
+  .leaflet-control-layers-toggle {
+    background-image: url('/images/layers.png') !important;
+  }
+
+  .leaflet-retina .leaflet-control-layers-toggle {
+    background-image: url('/images/layers-2x.png') !important;
+    background-size: 26px 26px !important;
+  }
+
+  .leaflet-default-icon-path {
+    background-image: url('/images/marker-icon.png') !important;
   }
 }

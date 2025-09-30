@@ -5,6 +5,7 @@ export { WeatherSearch } from './WeatherSearch';
 export { MessagingFlow } from './MessagingFlow';
 export { DemoMessagingFlow } from './DemoMessagingFlow';
 export { Inbox } from './Inbox';
+export { InboxCarousel } from './InboxCarousel';
 export { InboxMessage } from './InboxMessage';
 export { MessageDetailView } from './MessageDetailView';
 export { InboxFiltersComponent } from './InboxFilters';

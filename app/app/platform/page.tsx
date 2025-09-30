@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ParallaxCanvas from '@/components/ParallaxCanvas';
 import { WeatherDisplay } from '@/components/messaging/WeatherDisplay';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { HonkMessage, LocationData } from '@/types';
 import { locationService } from '@/services/locationService';
+import { SubwayLocationWidget } from '@/components/SubwayLocationWidget';
 
 const CUSTOM_LAYERS = [
   { src: "/nature_5/sky.png", speed: 0.2, yOffset: 0, alt: "Sky", scaleToFit: true },
@@ -18,11 +19,13 @@ const CUSTOM_LAYERS = [
 
 export default function PlatformPage() {
   const { user, loading } = useRequireAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const messageId = searchParams?.get('messageId');
   const [message, setMessage] = useState<HonkMessage | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [userLocation, setUserLocation] = useState<LocationData | null>(null);
+  const [hasFlyingPostcard, setHasFlyingPostcard] = useState(false);
 
   useEffect(() => {
     // Update time every second
@@ -55,6 +58,34 @@ export default function PlatformPage() {
     };
     
     initializeLocation();
+    
+    // Check if user has any flying postcards
+    const checkFlyingPostcards = async () => {
+      if (!user) return;
+      
+      try {
+        const response = await fetch('/api/messages/sent', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const flying = data.messages.some((msg: HonkMessage) => msg.status === 'flying');
+          setHasFlyingPostcard(flying);
+        }
+      } catch (error) {
+        console.error('Error checking flying postcards:', error);
+      }
+    };
+    
+    checkFlyingPostcards();
+    
+    // Poll for flying postcards status every 5 seconds
+    const pollInterval = setInterval(checkFlyingPostcards, 5000);
+    
+    return () => clearInterval(pollInterval);
   }, [messageId, user]);
 
   const fetchMessageDetails = async (id: string) => {
@@ -111,6 +142,16 @@ export default function PlatformPage() {
     return null; // useRequireAuth will redirect to login
   }
 
+  const handleNavigateToInbox = () => {
+    router.push('/app/inbox');
+  };
+
+  const handleNavigateToPostcard = () => {
+    if (!hasFlyingPostcard) {
+      router.push('/app/postcard');
+    }
+  };
+
   return (
     <>
       {/* Background parallax with moving duck */}
@@ -122,6 +163,34 @@ export default function PlatformPage() {
         <div className="absolute top-60 right-32 w-96 h-96 bg-blue-400/10 rounded-full blur-2xl animate-float-delayed"></div>
         <div className="absolute bottom-32 left-1/4 w-80 h-80 bg-purple-400/8 rounded-full blur-xl animate-float-slow"></div>
       </div>
+      
+      {/* Subway Location Widget at the top */}
+      {message && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30">
+          <SubwayLocationWidget 
+            currentLocation={
+              message.recipient_location ? 
+                (() => {
+                  try {
+                    const loc = typeof message.recipient_location === 'string' 
+                      ? JSON.parse(message.recipient_location) 
+                      : message.recipient_location;
+                    return `${loc.city || loc.state}, ${loc.country}`;
+                  } catch {
+                    return 'Unknown Location';
+                  }
+                })() :
+                'In Flight'
+            }
+            weather={userLocation ? {
+              temperature: 0,
+              condition: message.status === 'flying' ? 'In Transit' : 'Arrived',
+              icon: message.status === 'flying' ? '✈️' : '📍'
+            } : undefined}
+            isNewLocation={true}
+          />
+        </div>
+      )}
 
   <div style={{ zIndex: 10 }}>
         {/* Header with message info */}
@@ -268,18 +337,29 @@ export default function PlatformPage() {
         {/* Bottom navigation */}
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20">
           <div className="flex gap-4">
-            <a
-              href="/postcard"
-              className="px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl text-white font-medium shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02]"
+            <button
+              onClick={handleNavigateToInbox}
+              className="px-8 py-4 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl text-white font-semibold shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] flex items-center gap-2"
             >
-              Send Another Postcard
-            </a>
-            <a
-              href="/inbox"
-              className="px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl text-white font-medium shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02]"
+              <span className="text-2xl">📬</span>
+              <span>Inbox</span>
+            </button>
+            <button
+              onClick={handleNavigateToPostcard}
+              disabled={hasFlyingPostcard}
+              className={`px-8 py-4 backdrop-blur-md border rounded-2xl font-semibold shadow-lg transition-all duration-300 flex items-center gap-2 ${
+                hasFlyingPostcard 
+                  ? 'bg-gray-500/20 border-gray-500/30 text-gray-300 cursor-not-allowed opacity-50' 
+                  : 'bg-white/20 hover:bg-white/30 border-white/30 text-white hover:shadow-xl hover:scale-[1.02]'
+              }`}
+              title={hasFlyingPostcard ? 'Wait for your duck to return!' : 'Create a new postcard'}
             >
-              View Inbox
-            </a>
+              <span className="text-2xl">{hasFlyingPostcard ? '🦆✈️' : '✉️'}</span>
+              <span>{hasFlyingPostcard ? 'Duck Flying...' : 'Postcard'}</span>
+              {hasFlyingPostcard && (
+                <span className="text-sm ml-1">🔒</span>
+              )}
+            </button>
           </div>
         </div>
       </div>

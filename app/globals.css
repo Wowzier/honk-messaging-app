@@ -41,6 +41,23 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Adding journal theme tokens to Tailwind */
+  --color-journal-frame: var(--journal-frame);
+  --color-journal-paper: var(--journal-paper);
+  --color-journal-paper-alt: var(--journal-paper-alt);
+  --color-journal-accent: var(--journal-accent);
+  --color-journal-accent-foreground: var(--journal-accent-foreground);
+  --color-journal-highlight: var(--journal-highlight);
+  --color-journal-text: var(--journal-text);
+  --color-journal-doodle: var(--journal-doodle);
+  --color-journal-marker-yellow: var(--journal-marker-yellow);
+  --color-journal-marker-black: var(--journal-marker-black);
+  --color-journal-button: var(--journal-button);
+  --color-journal-button-light: var(--journal-button-light);
+  --color-journal-button-cancel: var(--journal-button-cancel);
+  --color-journal-button-cancel-fg: var(--journal-button-cancel-fg);
+  --color-journal-underline: var(--journal-underline);
 }
 
 :root {
@@ -85,6 +102,38 @@
   --inset: min(2vw, 1.5rem);
   --sides: 1rem;
   --footer-safe-area: calc(var(--inset) * 2 + 1.5rem + 2.25rem);
+  
+  /* Animal Crossing journal theme tokens */
+  --journal-frame: oklch(0.75 0.15 130); /* Lime green #8bc34a */
+  --journal-paper: oklch(0.96 0.02 85); /* Cream/beige #f5f0e8 */
+  --journal-paper-alt: oklch(0.97 0.01 90); /* Light cream #f8f8f0 */
+  --journal-accent: oklch(0.72 0.18 195); /* Teal/cyan #4dd0e1 */
+  --journal-accent-foreground: oklch(1 0 0); /* White */
+  --journal-highlight: oklch(0.68 0.22 65); /* Orange #ff9800 */
+  --journal-text: oklch(0.58 0.08 170); /* Muted teal text #6b9080 */
+  --journal-doodle: oklch(0.81 0.12 15); /* Coral pink #ff9e9e */
+  --journal-marker-yellow: oklch(0.92 0.18 100); /* Yellow #ffeb3b */
+  --journal-marker-black: oklch(0.38 0 0); /* Dark gray #5a5a5a */
+  --journal-button: oklch(0.55 0.05 55); /* Brown #8b7355 */
+  --journal-button-light: oklch(0.88 0.03 70); /* Light beige #e8dcc8 */
+  --journal-button-cancel: oklch(0.82 0.04 65); /* Tan #d4c4a8 */
+  --journal-button-cancel-fg: oklch(0.35 0.03 55); /* Dark brown #5a4a3a */
+  --journal-underline: oklch(0.81 0.12 110); /* Yellow-green #c5d86d */
+}
+
+/* Custom SL Minoel font */
+@font-face {
+  font-family: 'SL Minoel';
+  src: url('/fonts/SL Minoel.otf') format('opentype'),
+       url('/fonts/SL Minoel.otf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Use SL Minoel as the default font */
+:root {
+  --font-sans: 'SL Minoel', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
 
 .dark {
@@ -156,6 +205,7 @@
     margin: 0;
     background-color: var(--background);
     color: var(--foreground);
+    font-family: var(--font-sans);
     position: fixed;
     overflow-y: scroll; /* Enable vertical scrolling on body */
     overflow-x: hidden; /* Prevent horizontal scrolling */

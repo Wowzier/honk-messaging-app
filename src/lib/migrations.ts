@@ -327,6 +327,61 @@ export const migrations: Migration[] = [
       `);
     }
   },
+  {
+    version: 13,
+    name: 'add_sticker_data_to_messages',
+    up: (db: Database) => {
+      const columns = db.prepare("PRAGMA table_info(messages)").all() as Array<{ name: string }>;
+      const columnNames = new Set(columns.map(column => column.name));
+
+      // Add sticker data field to messages table
+      if (!columnNames.has('sticker_data')) {
+        db.exec(`ALTER TABLE messages ADD COLUMN sticker_data TEXT DEFAULT '[]';`);
+      }
+
+      // Add message type field to distinguish postcard vs regular message
+      if (!columnNames.has('message_type')) {
+        db.exec(`ALTER TABLE messages ADD COLUMN message_type TEXT DEFAULT 'regular' CHECK (message_type IN ('regular', 'postcard'));`);
+      }
+    },
+    down: (db: Database) => {
+      // SQLite doesn't support DROP COLUMN, so columns remain
+      console.log('Columns remain in place on rollback due to SQLite limitations.');
+    }
+  },
+  {
+    version: 14,
+    name: 'add_seamless_auth_fields',
+    up: (db: Database) => {
+      const columns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+      const columnNames = new Set(columns.map(column => column.name));
+
+      // Add device fingerprint field to users table
+      if (!columnNames.has('device_fingerprint')) {
+        db.exec(`ALTER TABLE users ADD COLUMN device_fingerprint TEXT;`);
+      }
+
+      // Create device_link_codes table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS device_link_codes (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          code TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          expires_at TEXT NOT NULL,
+          used INTEGER NOT NULL DEFAULT 0 CHECK (used IN (0, 1)),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_device_link_codes_code ON device_link_codes(code);
+        CREATE INDEX IF NOT EXISTS idx_device_link_codes_user_id ON device_link_codes(user_id);
+        CREATE INDEX IF NOT EXISTS idx_device_link_codes_expires_at ON device_link_codes(expires_at);
+      `);
+    },
+    down: (db: Database) => {
+      db.exec('DROP TABLE IF EXISTS device_link_codes;');
+    }
+  },
 
 ];
 

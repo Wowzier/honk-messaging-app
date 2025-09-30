@@ -28,6 +28,19 @@ export interface LocationData {
   is_anonymous: boolean;
 }
 
+export interface StickerData {
+  id: string;
+  name: string;
+  emoji?: string;
+  imageUrl?: string;
+  type: 'default' | 'user';
+  x: number;
+  y: number;
+  size: number;
+  rotation: number;
+  scale: number;
+}
+
 export interface HonkMessage {
   id: string;
   sender_id: string;
@@ -40,6 +53,8 @@ export interface HonkMessage {
   created_at: Date;
   delivered_at?: Date;
   journey_data?: JourneyData;
+  message_type: 'regular' | 'postcard';
+  sticker_data: StickerData[];
 }
 
 export interface JourneyData {
@@ -136,6 +151,8 @@ export interface MessageRow {
   created_at: string;
   delivered_at: string | null;
   journey_data: string | null; // JSON string
+  message_type: string;
+  sticker_data: string; // JSON string
 }
 
 export interface ConversationRow {

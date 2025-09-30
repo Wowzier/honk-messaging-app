@@ -12,6 +12,8 @@ interface AuthContextType {
   logout: () => void;
   updateProfile: (profile: Partial<UserProfile>) => Promise<boolean>;
   refreshUser: () => Promise<void>;
+  generateLinkCode: () => Promise<{ code: string; expiresIn: number } | null>;
+  linkDevice: (code: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,10 +38,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     initializeAuth();
   }, []);
 
+  const getDeviceInfo = () => {
+    return {
+      userAgent: navigator.userAgent,
+      screenResolution: `${screen.width}x${screen.height}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      language: navigator.language,
+      platform: navigator.platform
+    };
+  };
+
   const initializeAuth = async () => {
     try {
       const token = Cookies.get(TOKEN_COOKIE_NAME);
       if (token) {
+        // Try to verify existing token
         const response = await fetch('/api/auth/verify', {
           method: 'POST',
           headers: {
@@ -52,15 +65,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const data = await response.json();
           if (data.success && data.user) {
             setUser(data.user);
-          } else {
-            // Invalid token, remove it
-            Cookies.remove(TOKEN_COOKIE_NAME);
+            setLoading(false);
+            return;
           }
-        } else {
-          // Token verification failed, remove it
-          Cookies.remove(TOKEN_COOKIE_NAME);
         }
+        
+        // Token is invalid, remove it
+        Cookies.remove(TOKEN_COOKIE_NAME);
       }
+
+      // No valid token, try seamless device authentication
+      try {
+        const deviceInfo = getDeviceInfo();
+        const response = await fetch('/api/auth/device', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(deviceInfo),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user && data.token) {
+            setUser(data.user);
+            Cookies.set(TOKEN_COOKIE_NAME, data.token, COOKIE_OPTIONS);
+          }
+        }
+      } catch (deviceAuthError) {
+        console.error('Device auth error:', deviceAuthError);
+      }
+
     } catch (error) {
       console.error('Auth initialization error:', error);
       Cookies.remove(TOKEN_COOKIE_NAME);
@@ -185,6 +220,61 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const generateLinkCode = async (): Promise<{ code: string; expiresIn: number } | null> => {
+    try {
+      const token = Cookies.get(TOKEN_COOKIE_NAME);
+      if (!token) {
+        return null;
+      }
+
+      const response = await fetch('/api/auth/generate-code', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          return { code: data.code, expiresIn: data.expiresIn };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Generate link code error:', error);
+      return null;
+    }
+  };
+
+  const linkDevice = async (code: string): Promise<boolean> => {
+    try {
+      const deviceInfo = getDeviceInfo();
+      const response = await fetch('/api/auth/link-device', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code, ...deviceInfo }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user && data.token) {
+          setUser(data.user);
+          Cookies.set(TOKEN_COOKIE_NAME, data.token, COOKIE_OPTIONS);
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Link device error:', error);
+      return false;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     loading,
@@ -193,6 +283,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     logout,
     updateProfile,
     refreshUser,
+    generateLinkCode,
+    linkDevice,
   };
 
   return (

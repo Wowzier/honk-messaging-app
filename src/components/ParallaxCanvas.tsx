@@ -262,10 +262,10 @@ export default function ParallaxCanvas({
     container.style.left = '0';
     container.style.width = '100vw';
     container.style.height = '100vh';
-    container.style.zIndex = '-1';
+    container.style.zIndex = '0';
     container.style.pointerEvents = 'none';
   // container.style.overflow = 'hidden';
-    container.style.background = 'linear-gradient(180deg,#0b1220,#07101a)';
+    container.style.background = 'transparent';
     portalRef.current = container;
     document.body.appendChild(container);
     
@@ -296,7 +296,15 @@ export default function ParallaxCanvas({
               margin: 0,
               // overflow: 'hidden'
             }
-          : styles.wrapper
+          : { 
+              position: 'absolute' as const, 
+              top: 0, 
+              left: 0, 
+              width: '100%', 
+              height: '100%', 
+              padding: 0, 
+              margin: 0 
+            }
       }
     >
       <canvas
@@ -313,7 +321,15 @@ export default function ParallaxCanvas({
                 display: 'block',
                 border: 'none'
               }
-            : styles.canvas
+            : { 
+                position: 'absolute' as const, 
+                top: 0, 
+                left: 0, 
+                width: '100%', 
+                height: '100%', 
+                display: 'block',
+                border: 'none'
+              }
         }
       />
     </div>

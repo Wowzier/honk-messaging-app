@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 // Progress component (simple implementation)
@@ -17,7 +18,12 @@ import { LocationData, FlightProgress, WeatherEvent } from '@/types';
 import { GeolocationService } from '@/services/geolocation';
 import { weatherService } from '@/services/weather';
 import { getLocationDescription, getDirectionDescription } from '@/utils/location-utils';
-import { FlightMap } from './FlightMap';
+
+// Dynamically import FlightMap with no SSR to avoid 'window is not defined' error
+const FlightMap = dynamic(() => import('./FlightMap').then(mod => mod.FlightMap), { 
+  ssr: false,
+  loading: () => <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">Loading map...</div>
+});
 
 interface FlightTrackerProps {
   messageId?: string;

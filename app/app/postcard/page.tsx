@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import StickerPeel from '../../components/StickerPeel';
+import StickerPeel from '@/components/StickerPeel';
 import { Button } from '@/components/ui/button';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { JourneyTransition } from '@/components/JourneyTransition';
 import './page.css';
 import {
   Select,
@@ -21,6 +22,9 @@ export default function PostcardPage() {
   const [message, setMessage] = useState<string>('');
   const [locationSharing, setLocationSharing] = useState<'state' | 'country' | 'anonymous'>('state');
   const [isLoading, setIsLoading] = useState(false);
+  const [showTransition, setShowTransition] = useState(false);
+  const [messageId, setMessageId] = useState<string | null>(null);
+  const [recipientUsername, setRecipientUsername] = useState<string>('');
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [showLineLimitNotice, setShowLineLimitNotice] = useState(false);
   const [placedStickers, setPlacedStickers] = useState<Array<{
@@ -151,15 +155,34 @@ export default function PostcardPage() {
 
 
   const handleSendPostcard = async () => {
-    if (!message.trim()) return;
+    if (!message.trim()) {
+      return;
+    }
 
+    const lineCount = calculatePostcardLineCount(message.trim());
     if (lineCount > POSTCARD_MAX_LINES) {
       setShowLineLimitNotice(true);
       return;
     }
 
+    // Use Tailwind Algorithm to automatically find recipient
     setIsLoading(true);
+    
     try {
+      // Transform placed stickers to match StickerData interface
+      const stickerData = placedStickers.map((sticker, index) => ({
+        id: sticker.id,
+        name: `sticker-${index}`,
+        emoji: '🎨',
+        imageUrl: '/sticker.png',
+        type: 'default' as const,
+        x: sticker.x,
+        y: sticker.y,
+        size: 64,
+        rotation: sticker.rotation,
+        scale: 1,
+      }));
+
       const response = await fetch('/api/messages/send', {
         method: 'POST',
         headers: {
@@ -169,6 +192,9 @@ export default function PostcardPage() {
           title: 'Fall Postcard',
           content: message.trim(),
           locationSharing,
+          message_type: 'postcard',
+          sticker_data: stickerData,
+          // Don't pass recipient_id - let Tailwind Algorithm choose
         }),
       });
 
@@ -179,19 +205,26 @@ export default function PostcardPage() {
 
       const result = await response.json();
 
-      // Success! Clear the form
+      // Success! Clear the form and show transition
       setMessage('');
       setPlacedStickers([]);
       setShowLineLimitNotice(false);
-
-      // Redirect to platform page to see duck flight
-      window.location.href = `/platform?messageId=${result.message.id}`;
+      setMessageId(result.message.id);
+      setRecipientUsername(result.message.recipient_username || 'Someone');
+      setShowTransition(true);
 
     } catch (error) {
       console.error('Error sending postcard:', error);
       alert('Failed to send postcard. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleTransitionComplete = () => {
+    // Redirect to platform page to see duck flight
+    if (messageId) {
+      window.location.href = `/app/platform?messageId=${messageId}`;
     }
   };
 
@@ -454,6 +487,14 @@ export default function PostcardPage() {
           </div>
         </div>
       </div>
+
+      {/* Journey Transition Overlay */}
+      {showTransition && (
+        <JourneyTransition
+          onComplete={handleTransitionComplete}
+          recipientUsername={recipientUsername}
+        />
+      )}
     </>
   );
 }

@@ -1,26 +1,22 @@
 'use client';
 
 import React from 'react';
-import { Inbox } from '@/components/messaging';
-import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { InboxCarousel } from '@/components/messaging/InboxCarousel';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function InboxPage() {
-  const { user, loading } = useRequireAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-journal-paper to-journal-paper-alt">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="text-8xl mb-6 animate-bounce">📬</div>
+          <div className="text-2xl font-bold text-gray-700">Getting your workspace ready...</div>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return null; // useRequireAuth will redirect to login
-  }
-
-  return <Inbox />;
+  return <InboxCarousel />;
 }

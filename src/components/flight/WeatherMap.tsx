@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import '../../styles/leaflet.css';
 import L from 'leaflet';
 import { LocationData } from '@/types';
 

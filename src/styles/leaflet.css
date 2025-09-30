@@ -1,0 +1,30 @@
+/* Minimal Leaflet CSS overrides used by the app. Images reference the public /images/ folder. */
+.leaflet-control-layers-toggle {
+  background-image: url('/images/layers.png');
+  width: 36px;
+  height: 36px;
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  display: block;
+}
+
+.leaflet-retina .leaflet-control-layers-toggle {
+  background-image: url('/images/layers-2x.png');
+  background-size: 26px 26px;
+}
+
+.leaflet-touch .leaflet-control-layers-toggle {
+  width: 44px;
+  height: 44px;
+}
+
+.leaflet-default-icon-path {
+  background-image: url('/images/marker-icon.png');
+}
+
+/* Minimal base rules so the map controls display correctly */
+.leaflet-bar a { display: block; }
+.leaflet-control { z-index: 800; }
+
+/* Basic container sizing fallback */
+.leaflet-container { background: #ddd; }
