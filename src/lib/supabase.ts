@@ -5,9 +5,13 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 // the server-only names so deployments that only define those (like Vercel
 // secrets) still succeed.
 const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??
+  process.env.SUPABASE_URL ??
+  'https://lotzlwvegithtpphglck.supabase.co';
 const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  process.env.SUPABASE_ANON_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvdHpsd3ZlZ2l0aHRwcGhnbGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNTc3NzYsImV4cCI6MjA3NDgzMzc3Nn0.31K2W-IPXKFI96IKqvI-H3r3HufAxYNFygXyNOQMStc';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl) {

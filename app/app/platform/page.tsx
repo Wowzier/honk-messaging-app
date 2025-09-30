@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ParallaxCanvas from '@/components/ParallaxCanvas';
 import { WeatherDisplay } from '@/components/messaging/WeatherDisplay';
@@ -17,7 +17,13 @@ const CUSTOM_LAYERS = [
   { src: "/nature_5/grass-and-trees.png", speed: 0.8, yOffset: -60, alt: "Grass and Trees" },
 ];
 
-export default function PlatformPage() {
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <p className="text-gray-600">Loading platform...</p>
+  </div>
+);
+
+function PlatformPageContent() {
   const { user, loading } = useRequireAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -391,5 +397,13 @@ export default function PlatformPage() {
         }
       `}</style>
     </>
+  );
+}
+
+export default function PlatformPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <PlatformPageContent />
+    </Suspense>
   );
 }
