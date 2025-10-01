@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useRef, useEffect } from 'react'
-import { Palette } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Palette, X } from 'lucide-react'
 
 interface ColorWheelPickerProps {
   currentColor: string
@@ -16,9 +16,10 @@ export const ColorWheelPicker: React.FC<ColorWheelPickerProps> = ({
   const [hue, setHue] = useState(0)
   const [saturation, setSaturation] = useState(100)
   const [lightness, setLightness] = useState(50)
-  const [buttonRect, setButtonRect] = useState<DOMRect | null>(null)
+  const [panelPosition, setPanelPosition] = useState<{ top: number; left: number } | null>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   // Close picker when clicking outside
   useEffect(() => {
@@ -45,6 +46,99 @@ export const ColorWheelPicker: React.FC<ColorWheelPickerProps> = ({
     }
     return `#${f(0)}${f(8)}${f(4)}`
   }
+
+  const hexToHsl = useCallback((hex: string) => {
+    const sanitized = hex.replace('#', '')
+    if (sanitized.length !== 6) return null
+
+    const r = parseInt(sanitized.substring(0, 2), 16) / 255
+    const g = parseInt(sanitized.substring(2, 4), 16) / 255
+    const b = parseInt(sanitized.substring(4, 6), 16) / 255
+
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    let h = 0
+    let s = 0
+    const l = (max + min) / 2
+
+    if (max !== min) {
+      const d = max - min
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+      switch (max) {
+        case r:
+          h = (g - b) / d + (g < b ? 6 : 0)
+          break
+        case g:
+          h = (b - r) / d + 2
+          break
+        default:
+          h = (r - g) / d + 4
+      }
+      h /= 6
+    }
+
+    return {
+      h: Math.round(h * 360),
+      s: Math.round(s * 100),
+      l: Math.round(l * 100)
+    }
+  }, [])
+
+  const updatePanelPosition = useCallback(() => {
+    if (!buttonRef.current || !panelRef.current) return
+
+    const buttonRect = buttonRef.current.getBoundingClientRect()
+    const panelRect = panelRef.current.getBoundingClientRect()
+    const margin = 12
+
+    let left = buttonRect.left
+    let top = buttonRect.bottom + margin
+
+    const maxLeft = window.innerWidth - panelRect.width - margin
+    const minLeft = margin
+    left = Math.min(Math.max(left, minLeft), maxLeft < minLeft ? minLeft : maxLeft)
+
+    if (top + panelRect.height > window.innerHeight - margin) {
+      const potentialTop = buttonRect.top - panelRect.height - margin
+      top = potentialTop >= margin ? potentialTop : window.innerHeight - panelRect.height - margin
+    }
+
+    if (top < margin) {
+      top = margin
+    }
+
+    setPanelPosition({ top, left })
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const frame = requestAnimationFrame(updatePanelPosition)
+    const handleWindowChange = () => updatePanelPosition()
+
+    window.addEventListener('resize', handleWindowChange)
+    window.addEventListener('scroll', handleWindowChange, true)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('resize', handleWindowChange)
+      window.removeEventListener('scroll', handleWindowChange, true)
+    }
+  }, [isOpen, updatePanelPosition])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setPanelPosition(null)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    const hsl = hexToHsl(currentColor)
+    if (!hsl) return
+    setHue(hsl.h)
+    setSaturation(hsl.s)
+    setLightness(hsl.l)
+  }, [currentColor, hexToHsl])
 
   const handleHueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newHue = parseInt(e.target.value)
@@ -83,97 +177,112 @@ export const ColorWheelPicker: React.FC<ColorWheelPickerProps> = ({
       <button
         ref={buttonRef}
         onClick={() => {
-          setIsOpen(!isOpen)
-          if (!isOpen && buttonRef.current) {
-            setButtonRect(buttonRef.current.getBoundingClientRect())
+          const nextState = !isOpen
+          setIsOpen(nextState)
+          if (!nextState) {
+            setPanelPosition(null)
           }
         }}
-        className="w-10 h-10 rounded-full bg-white hover:bg-journal-button-light border-2 border-journal-accent/30 flex items-center justify-center hover:scale-110 transition-all shadow-sm"
+        className="w-10 h-10 rounded-full border-2 border-journal-accent/40 bg-white/80 shadow-sm backdrop-blur-sm transition-all hover:scale-110 hover:border-journal-accent"
         title="Color Picker"
         style={{ backgroundColor: currentColor }}
       >
         <Palette className="w-4 h-4 text-white drop-shadow-md" />
       </button>
 
-      {isOpen && buttonRect && (
-        <div 
-          className="fixed bg-white rounded-2xl shadow-2xl p-4 w-72 border-4 border-journal-accent/20"
-          style={{ 
+      {isOpen && (
+        <div
+          ref={panelRef}
+          className="fixed z-[120] w-64 rounded-2xl border border-journal-accent/40 bg-white/95 p-4 shadow-xl backdrop-blur-xl"
+          style={{
             fontFamily: "'Comic Sans MS', cursive",
-            top: `${buttonRect.bottom + 8}px`,
-            left: `${buttonRect.left}px`,
-            zIndex: 9999
-          }}>
-          <div className="text-sm font-bold text-journal-button mb-3">🎨 Custom Color</div>
+            top: `${panelPosition?.top ?? 0}px`,
+            left: `${panelPosition?.left ?? 0}px`,
+            opacity: panelPosition ? 1 : 0,
+            pointerEvents: panelPosition ? 'auto' : 'none'
+          }}
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-sm font-bold text-journal-button">🎨 Custom color</div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-journal-accent/30 text-journal-button transition hover:border-journal-accent hover:bg-journal-accent/10"
+              aria-label="Close color picker"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
 
-          {/* Current color preview */}
-          <div className="mb-4 flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-full border-4 border-white shadow-lg"
-              style={{ backgroundColor: hslToHex(hue, saturation, lightness) }}
-            />
-            <div className="text-xs text-gray-600 font-mono bg-gray-100 px-3 py-1 rounded-full">
-              {hslToHex(hue, saturation, lightness)}
+          <div className="mb-4 rounded-xl border border-journal-accent/20 bg-white/60 p-3">
+            <div className="flex items-center gap-3">
+              <div
+                className="h-12 w-12 rounded-full border-2 border-white shadow-sm"
+                style={{ backgroundColor: hslToHex(hue, saturation, lightness) }}
+              />
+              <div className="space-y-1">
+                <span className="block text-[11px] font-semibold uppercase tracking-wide text-journal-button/70">Selected</span>
+                <span className="inline-flex items-center rounded-full bg-journal-highlight/10 px-3 py-1 font-mono text-xs text-journal-button">
+                  {hslToHex(hue, saturation, lightness)}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Hue slider */}
-          <div className="mb-3">
-            <label className="text-xs font-semibold text-gray-600 mb-1 block">Hue</label>
-            <input
-              type="range"
-              min="0"
-              max="360"
-              value={hue}
-              onChange={handleHueChange}
-              className="w-full h-3 rounded-full appearance-none cursor-pointer"
-              style={{
-                background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)'
-              }}
-            />
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-journal-button/60">Hue</label>
+              <input
+                type="range"
+                min="0"
+                max="360"
+                value={hue}
+                onChange={handleHueChange}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full"
+                style={{
+                  background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)'
+                }}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-journal-button/60">Saturation</label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={saturation}
+                onChange={handleSaturationChange}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full"
+                style={{
+                  background: `linear-gradient(to right, hsl(${hue}, 0%, ${lightness}%), hsl(${hue}, 100%, ${lightness}%))`
+                }}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-journal-button/60">Lightness</label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={lightness}
+                onChange={handleLightnessChange}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full"
+                style={{
+                  background: `linear-gradient(to right, hsl(${hue}, ${saturation}%, 0%), hsl(${hue}, ${saturation}%, 50%), hsl(${hue}, ${saturation}%, 100%))`
+                }}
+              />
+            </div>
           </div>
 
-          {/* Saturation slider */}
-          <div className="mb-3">
-            <label className="text-xs font-semibold text-gray-600 mb-1 block">Saturation</label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={saturation}
-              onChange={handleSaturationChange}
-              className="w-full h-3 rounded-full appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, hsl(${hue}, 0%, ${lightness}%), hsl(${hue}, 100%, ${lightness}%))`
-              }}
-            />
-          </div>
-
-          {/* Lightness slider */}
-          <div className="mb-4">
-            <label className="text-xs font-semibold text-gray-600 mb-1 block">Lightness</label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={lightness}
-              onChange={handleLightnessChange}
-              className="w-full h-3 rounded-full appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, hsl(${hue}, ${saturation}%, 0%), hsl(${hue}, ${saturation}%, 50%), hsl(${hue}, ${saturation}%, 100%))`
-              }}
-            />
-          </div>
-
-          {/* Preset colors */}
-          <div className="border-t-2 border-gray-200 pt-3">
-            <div className="text-xs font-semibold text-gray-600 mb-2">Quick picks</div>
-            <div className="grid grid-cols-5 gap-2">
+          <div className="mt-4 space-y-2">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-journal-button/60">Quick picks</div>
+            <div className="grid grid-cols-6 gap-2">
               {presetColors.map((color, index) => (
                 <button
                   key={index}
                   onClick={() => handlePresetColor(color)}
-                  className="w-10 h-10 rounded-full border-3 border-white shadow-md hover:scale-110 transition-transform"
+                  className="h-8 w-8 rounded-full border border-white/70 shadow-sm transition-transform hover:scale-110"
                   style={{ backgroundColor: color }}
                   title={color}
                 />
