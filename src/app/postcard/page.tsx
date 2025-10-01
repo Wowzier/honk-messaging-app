@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import StickerGroup from '@/components/StickerGroup';
 import { calculatePostcardLineCount, POSTCARD_MAX_LINES } from '@/utils/postcard';
+import Cookies from 'js-cookie';
 
 export default function PostcardPage() {
   const { user, loading } = useRequireAuth();
@@ -47,7 +48,7 @@ export default function PostcardPage() {
   }
 
   if (!user) {
-    return null; // useRequireAuth will redirect to login
+    return null; // useRequireAuth will redirect to the home screen for a fresh courier ID
   }
 
   // Handle message change with precise line counting
@@ -160,10 +161,19 @@ export default function PostcardPage() {
 
     setIsLoading(true);
     try {
+      const authToken =
+        Cookies.get('honk_auth_token') ||
+        (typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null);
+
+      if (!authToken) {
+        throw new Error('Courier session not found. Refresh the page to generate a new ID.');
+      }
+
       const response = await fetch('/api/messages/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           title: 'Fall Postcard',
@@ -189,7 +199,8 @@ export default function PostcardPage() {
 
     } catch (error) {
       console.error('Error sending postcard:', error);
-      alert('Failed to send postcard. Please try again.');
+      const message = error instanceof Error ? error.message : 'Failed to send postcard. Please try again.';
+      alert(message);
     } finally {
       setIsLoading(false);
     }

@@ -2,8 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/services/auth';
 import { AuthUser } from '@/types';
 
+const TOKEN_COOKIE_NAME = 'honk_auth_token';
+
 export interface AuthenticatedRequest extends NextRequest {
   user?: AuthUser;
+}
+
+function extractToken(request: NextRequest): string | null {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+
+  const cookieToken = request.cookies.get(TOKEN_COOKIE_NAME)?.value;
+  if (cookieToken) {
+    return cookieToken;
+  }
+
+  return null;
 }
 
 /**
@@ -12,21 +28,19 @@ export interface AuthenticatedRequest extends NextRequest {
 export function withAuth(handler: (req: AuthenticatedRequest) => Promise<NextResponse>) {
   return async (request: NextRequest): Promise<NextResponse> => {
     try {
-      // Get token from Authorization header
-      const authHeader = request.headers.get('authorization');
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      const token = extractToken(request);
+      if (!token) {
         return NextResponse.json(
-          { success: false, message: 'Authorization token required' },
+          { success: false, message: 'Courier session token required' },
           { status: 401 }
         );
       }
 
-      const token = authHeader.substring(7);
       const user = authService.verifyToken(token);
 
       if (!user) {
         return NextResponse.json(
-          { success: false, message: 'Invalid or expired token' },
+          { success: false, message: 'Invalid or expired courier session' },
           { status: 401 }
         );
       }
@@ -61,13 +75,11 @@ export function getAuthenticatedUser(request: AuthenticatedRequest): AuthUser {
  */
 export async function authMiddleware(request: NextRequest): Promise<{ success: boolean; user?: AuthUser }> {
   try {
-    // Get token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = extractToken(request);
+    if (!token) {
       return { success: false };
     }
 
-    const token = authHeader.substring(7);
     const user = authService.verifyToken(token);
 
     if (!user) {

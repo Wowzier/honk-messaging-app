@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import Cookies from 'js-cookie';
 import { AuthUser, LoginCredentials, RegisterCredentials, AuthResponse, UserProfile } from '@/types';
 
@@ -137,60 +137,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
+  const deprecatedAuthMessage =
+    'Email and password authentication has been retired. Courier IDs are assigned automatically when you visit Honk.';
 
-      const data = await response.json();
-
-      if (data.success && data.user && data.token) {
-        setUser(data.user);
-        Cookies.set(TOKEN_COOKIE_NAME, data.token, COOKIE_OPTIONS);
-        persistToken(data.token);
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Login error:', error);
-      return {
-        success: false,
-        message: 'Login failed. Please try again.'
-      };
-    }
+  const login = async (_credentials: LoginCredentials): Promise<AuthResponse> => {
+    console.warn('Login attempt received, but email/password auth is disabled.');
+    await initializeAuth();
+    return {
+      success: false,
+      message: deprecatedAuthMessage,
+    };
   };
 
-  const register = async (credentials: RegisterCredentials): Promise<AuthResponse> => {
-    try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      const data = await response.json();
-
-      if (data.success && data.user && data.token) {
-        setUser(data.user);
-        Cookies.set(TOKEN_COOKIE_NAME, data.token, COOKIE_OPTIONS);
-        persistToken(data.token);
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Registration error:', error);
-      return {
-        success: false,
-        message: 'Registration failed. Please try again.'
-      };
-    }
+  const register = async (_credentials: RegisterCredentials): Promise<AuthResponse> => {
+    console.warn('Registration attempt received, but manual signup is disabled.');
+    await initializeAuth();
+    return {
+      success: false,
+      message: deprecatedAuthMessage,
+    };
   };
 
   const logout = () => {
@@ -230,7 +195,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       const token = getStoredToken();
       if (!token) {
@@ -254,7 +219,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('User refresh error:', error);
     }
-  };
+  }, []);
 
   const generateLinkCode = async (): Promise<{ code: string; expiresIn: number } | null> => {
     try {
