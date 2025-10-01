@@ -1,27 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { authService } from '@/services/auth';
-import { LoginCredentials } from '@/types';
-import { dbManager } from '@/lib/database';
-import { MigrationRunner } from '@/lib/migrations';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
-  try {
-    // Initialize database and run migrations
-    const db = dbManager.connect();
-    const migrationRunner = new MigrationRunner(db);
-    migrationRunner.runMigrations();
+const MESSAGE =
+  'Email/password login has been retired. Courier IDs are issued automatically via the seamless device auth flow.';
 
-    const body: LoginCredentials = await request.json();
-    const result = await authService.login(body);
-
-    return NextResponse.json(result, {
-      status: result.success ? 200 : 401
-    });
-  } catch (error) {
-    console.error('Login API error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+export async function POST() {
+  return NextResponse.json(
+    {
+      success: false,
+      message: MESSAGE,
+    },
+    { status: 410 }
+  );
 }
