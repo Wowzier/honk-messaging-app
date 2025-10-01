@@ -108,7 +108,7 @@ export default function PlatformPage() {
   }
 
   if (!user) {
-    return null; // useRequireAuth will redirect to login
+    return null; // useRequireAuth will redirect to the home screen for a fresh courier ID
   }
 
   return (

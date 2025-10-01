@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
   redirectTo?: string;
 }
 
-export function ProtectedRoute({ children, redirectTo = '/postcard' }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, redirectTo = '/' }: ProtectedRouteProps) {
   const { user, loading } = useRequireAuth(redirectTo);
 
   if (loading) {
@@ -23,7 +23,7 @@ export function ProtectedRoute({ children, redirectTo = '/postcard' }: Protected
   }
 
   if (!user) {
-    return null; // useRequireAuth will redirect to the provided path
+    return null; // useRequireAuth will redirect to a courier-aware destination
   }
 
   return <>{children}</>;

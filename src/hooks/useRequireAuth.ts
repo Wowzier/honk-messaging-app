@@ -7,7 +7,7 @@ import { useAuth } from './useAuth';
 /**
  * Hook that redirects to the provided path if the user is not authenticated
  */
-export function useRequireAuth(redirectTo: string = '/postcard') {
+export function useRequireAuth(redirectTo: string = '/') {
   const { user, loading } = useAuth();
   const router = useRouter();
 
